@@ -55,6 +55,8 @@ jobs:
         run: node scripts/gen-strings.js --check
       - name: Verify release version alignment (VERSION == rivet.rktd == updater)
         run: bash scripts/check-release-version.sh
+      - name: Offline Ed25519 release signing trust-root tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_release_signing.py'
 
   linux-host:
     name: Linux host (GTK4 build)
