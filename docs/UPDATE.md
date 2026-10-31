@@ -5,6 +5,20 @@ Payback ships with online updates from day one, built on `rivet/distribution`
 downloads signed artifacts; the native host owns installation. HTTPS protects
 transport but is never the root of trust — a signed manifest is.
 
+## Release signing preflight
+
+The tag-triggered release workflow requires `UPDATE_ED25519_PRIVATE_KEY_B64`
+before any macOS, Windows or Linux packaging starts. Its DER private key
+must derive the exact Ed25519 public key embedded in `app/version.rkt`.
+Missing, malformed or mismatched keys fail the release. The publishing
+job repeats the check. CI tests use only throwaway keys; secrets are never
+printed or committed.
+
+Executable signing is independent of update-manifest verification:
+macOS packages are currently ad-hoc (not Apple notarized), while Windows
+MSI/ZIP packages are unsigned by default. Future Developer ID notarization
+and optional Windows Authenticode must not block one another.
+
 ## Trust chain
 
 1. The backend downloads `update-manifest.json` from the update base URL and
