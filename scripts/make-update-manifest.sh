@@ -44,7 +44,7 @@ KEY_PATH="${3:?usage: make-update-manifest.sh <tag> <dist-dir> <key-der-path>}"
 VERSION="${TAG#v}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 KEY_ID="${RIVET_UPDATE_KEY_ID:-payback-2026-09}"
-BASE_URL="${RELEASE_ASSET_BASE_URL:-https://github.com/turinglambdaai/payback/releases/download/$TAG}"
+BASE_URL="${RELEASE_ASSET_BASE_URL:-https://github.com/turlamai/payback/releases/download/$TAG}"
 
 # ---- verify tag/version alignment -------------------------------------------
 [[ "$VERSION" == "$(tr -d '[:space:]' < "$ROOT/VERSION")" ]] || {
