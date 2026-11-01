@@ -9,8 +9,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # GitHub retains only one pending run per group. Do not let a later
+  # main push replace an earlier queued required quality gate.
+  # Only superseded revisions of the same pull request may cancel.
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Single source of truth for the rivet pin; every install step below
 # references this so a bump is one edit, not a grep-replace across jobs.
