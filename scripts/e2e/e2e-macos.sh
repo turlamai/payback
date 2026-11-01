@@ -70,15 +70,10 @@ EOF
     # trace records honestly that it happened. Every record is already
     # committed when the flag is set, so reaping is lossless.
     reap(){ kill -TERM "$1" 2>/dev/null||true;for _ in $(seq 1 40);do kill -0 "$1" 2>/dev/null||break;sleep .25;done;kill -9 "$1" 2>/dev/null||true; }
-    if [[ "$strict" == "1" ]]&&!python3 - "$output/trace-$phase.json" <<'EOF'
-import json, sys
-try:
-    t = json.load(open(sys.argv[1]))
-    sys.exit(0 if t.get("observations", {}).get("correction-dismissal-observed") else 1)
-except Exception:
-    sys.exit(1)
-EOF
-    then
+    # Strict interactive Cmd+Q must exit unless the trace explicitly records
+    # this run's rescue dismissal. Keep the '!' as a shell operator (not
+    # '!python3', which silently disables the failure gate).
+    if [[ "$strict" == "1" ]] && ! python3 "$repo/scripts/e2e/check_macos_rescue.py" "$output/trace-$phase.json"; then
       echo "Payback did not exit after the $phase run's Cmd+Q" >&2;exit 1
     fi
     echo "Payback ignored Cmd+Q; reaping (verify phase or rescue-degraded routing)" >&2
