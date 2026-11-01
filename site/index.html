@@ -73,10 +73,11 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
   </section>
 
   <section class="shot-section">
-    <figure>
-      <img src="img/payback-main-light.png" alt="Payback 主窗口（macOS）：累计投入、已赚回、整体日均与设备列表" loading="lazy">
-      <figcaption data-i18n="shot.caption">真实的 Payback（macOS）：三台设备，两台已回本，第三台进度 99%。</figcaption>
-    </figure>
+    <div style="max-width:760px;margin:auto;padding:24px;">
+      <h2 data-i18n="shot.title">添加设备，核对每日成本</h2>
+      <p data-i18n="shot.caption">在设备列表中添加名称、价格和购买日期；保存后核对每日成本，并重新打开应用确认记录仍在。若没有显示，请检查保存结果和日期。</p>
+      <p><a href="guide.html" data-i18n="shot.guide">查看完整的使用与备份指南</a></p>
+    </div>
   </section>
 
   <section id="features" class="section">
@@ -202,7 +203,9 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
 (function () {
   var zh = {
     "nav.features": "功能", "nav.how": "怎么用", "nav.guide": "手册", "nav.download": "下载", "nav.github": "GitHub",
-    "shot.caption": "真实的 Payback（macOS）：三台设备，两台已回本，第三台进度 99%。",
+    "shot.title": "添加设备，核对每日成本",
+    "shot.caption": "在设备列表中添加名称、价格和购买日期；保存后核对每日成本，并重新打开应用确认记录仍在。若没有显示，请检查保存结果和日期。",
+    "shot.guide": "查看完整的使用与备份指南",
     "hero.eyebrow": "开源 · 本地优先 · 原生应用 · 签名自动更新",
     "hero.h1a": "每一台设备，", "hero.h1b": "都在一天天回本",
     "hero.sub": "记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。",
@@ -233,7 +236,9 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
   };
   var en = {
     "nav.features": "Features", "nav.how": "How it works", "nav.guide": "Manual", "nav.download": "Download", "nav.github": "GitHub",
-    "shot.caption": "The real Payback on macOS: three devices, two fully paid back, the third at 99%.",
+    "shot.title": "Add a device and verify its daily cost",
+    "shot.caption": "Add a device name, price and purchase date; verify its daily cost after saving, then reopen the app and confirm the entry persists. If absent, check the save result and date.",
+    "shot.guide": "Read the complete user and backup guide",
     "hero.eyebrow": "Open source · Local-first · Native apps · Signed updates",
     "hero.h1a": "Watch every device ", "hero.h1b": "pay itself back",
     "hero.sub": "Record what you paid and Payback counts the daily cost down, day after day. Set what a day with the device is worth to you, and watch the payback ring fill up — turning every impulse buy into a visible investment.",
