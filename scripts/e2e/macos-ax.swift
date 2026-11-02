@@ -403,15 +403,25 @@ func focusSecondField() throws {
 /// the quit Apple Event works everywhere; the suite owns launching and
 /// this driver owns the real-user quit.
 func quitOrderly() {
-    _ = AXUIElementSetAttributeValue(appEl(), kAXFrontmostAttribute as CFString,
-                                     kCFBooleanTrue)
-    // SAFETY: if the app could not take frontmost (shared desktop, sick
-    // instance), a posted Cmd+Q would land in the user's focused app —
-    // skip the keys and let the suite's bounded TERM/KILL reap us instead
-    guard (attr(appEl(), kAXFrontmostAttribute) as? Bool) == true else { return }
+    // Dismissing a sheet or restoring the keyboard input source can move
+    // WindowServer focus even when AX still reports this app as frontmost.
+    // Use the same bounded activation + title-bar click as the other real
+    // keyboard phases. Never post Cmd+Q to an unverified target.
+    do {
+        try ensureKeyboardTarget()
+        try keyboardGuard("Cmd+Q")
+    } catch {
+        FileHandle.standardError.write(Data(
+            "Payback could not acquire keyboard focus for Cmd+Q: \(error)\n".utf8))
+        return // The shell's strict exit gate remains a hard failure.
+    }
     for down in [true, false] {
         guard let ev = CGEvent(keyboardEventSource: nil, virtualKey: 12, keyDown: down)
-        else { return }
+        else {
+            FileHandle.standardError.write(Data(
+                "Payback could not create Cmd+Q keyboard event\n".utf8))
+            return
+        }
         ev.flags = .maskCommand
         ev.post(tap: .cghidEventTap)
         usleep(50_000)
