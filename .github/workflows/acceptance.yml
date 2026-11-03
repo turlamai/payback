@@ -9,8 +9,10 @@ permissions:
 env:
   RIVET_PIN: 5b1f3466a6030592d63cec2d7f17f33ac9e1a76a
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Keep each main acceptance gate; GitHub silently replaces older pending
+  # runs that share a group. Only superseded revisions of one PR cancel.
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   windows:
