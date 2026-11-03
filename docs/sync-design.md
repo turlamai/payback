@@ -1,7 +1,7 @@
 # 多端同步设计（数据格式 v2）
 
 > 状态：**M1 已实施**（共享层 + macOS 宿主 1.11.0；Windows/Linux 宿主设置段随 #7/#8 落地）。
-> 进度追踪 [#9](https://github.com/turinglambdaai/payback/issues/9)。存储布局的权威描述
+> 进度追踪 [#9](https://github.com/turlamai/payback/issues/9)。存储布局的权威描述
 > 在 [`data-format.md`](data-format.md)；本文件保留「为什么」与不变式——改 `app/sync.rkt`、
 > 做任何同步相关 UI 之前必读。
 >

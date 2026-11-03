@@ -18,7 +18,7 @@ Keep billing and support complexity out of small tools. Build community trust th
 
 ## Free and paid scope
 
-Free / evaluation: No separate desktop/mobile charges, device-count gate, paid ledgers, export or BYO-sync tier. Mobile is a delivery plan, not a store-pricing plan. The legacy ten-device/PB1 gate is retired ([#20](https://github.com/turinglambdaai/payback/issues/20)); delivered releases are unrestricted and old data stays readable. The update-signing chain is preserved.
+Free / evaluation: No separate desktop/mobile charges, device-count gate, paid ledgers, export or BYO-sync tier. Mobile is a delivery plan, not a store-pricing plan. The legacy ten-device/PB1 gate is retired ([#20](https://github.com/turlamai/payback/issues/20)); delivered releases are unrestricted and old data stays readable. The update-signing chain is preserved.
 
 Paid: No paid tier is planned. Do not integrate Commerce or add Permit product gates.
 
@@ -32,6 +32,6 @@ The conflicting legacy product gate has been removed through the linked implemen
 
 #20 is complete: the legacy gate is retired. Free pricing does not reduce signed-update, recovery or privacy requirements.
 
-Execution entry: [issue #20](https://github.com/turinglambdaai/payback/issues/20) (complete). No commercial expansion is planned; this section stays as policy history.
+Execution entry: [issue #20](https://github.com/turlamai/payback/issues/20) (complete). No commercial expansion is planned; this section stays as policy history.
 
-Portfolio role and shared boundaries: [PORTFOLIO](https://github.com/turinglambdaai/turinglambdaai.github.io/blob/master/PORTFOLIO.md).
+Portfolio role and shared boundaries: [PORTFOLIO](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.md).

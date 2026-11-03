@@ -1112,7 +1112,7 @@ winrt::fire_and_forget MainWindow::AboutButton_Click(
   auto issue = Microsoft::UI::Xaml::Controls::HyperlinkButton();
   issue.Content(winrt::box_value(s.about_report_issue()));
   issue.NavigateUri(winrt::Windows::Foundation::Uri{
-      L"https://github.com/turinglambdaai/payback/issues"});
+      L"https://github.com/turlamai/payback/issues"});
   issue.HorizontalAlignment(Microsoft::UI::Xaml::HorizontalAlignment::Center);
   issue.Padding({0, 0, 0, 0});
   panel.Children().Append(tagline);
