@@ -65,7 +65,7 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
 <p class="reader-en product-availability" lang="en">Development preview. Payback is designated free on every delivered platform. No Pro licences are offered for purchase, and the retired device gate leaves no paywall.</p><p class="reader-zh product-availability" lang="zh">开发预览。Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。</p>
     <p class="sub" data-i18n="hero.sub">记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。</p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="https://github.com/turlamai/payback/releases/latest/download/payback-macos-arm64.dmg" data-i18n="hero.download-mac">下载 macOS 版</a>
+      <a class="btn btn-primary" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="macos-arm64.dmg" data-i18n="hero.download-mac">下载 macOS 版</a>
       <a class="btn" href="https://github.com/turlamai/payback/releases" data-i18n="hero.all-releases">全部版本</a>
       <a class="btn" href="https://github.com/turlamai/payback" data-i18n="hero.source">查看源码</a>
     </div>
@@ -129,15 +129,15 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
   <section id="download" class="section">
     <h2 data-i18n="download.title">下载</h2>
     <div class="dl-grid">
-      <a class="dl-card" id="dl-mac" href="https://github.com/turlamai/payback/releases/latest/download/payback-macos-arm64.dmg">
+      <a class="dl-card" id="dl-mac" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="macos-arm64.dmg">
         <h3>macOS</h3>
         <p data-i18n="dl.mac">14+ · Apple Silicon / Intel · DMG</p>
       </a>
-      <a class="dl-card" id="dl-win" href="https://github.com/turlamai/payback/releases/latest/download/payback-windows-x64.msi">
+      <a class="dl-card" id="dl-win" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="windows-x64.msi">
         <h3>Windows</h3>
         <p data-i18n="dl.win">10+ · x64 · MSI</p>
       </a>
-      <a class="dl-card" id="dl-linux" href="https://github.com/turlamai/payback/releases/latest/download/payback-linux-x64.AppImage">
+      <a class="dl-card" id="dl-linux" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="linux-x86_64.AppImage">
         <h3>Linux</h3>
         <p data-i18n="dl.linux">实验性 · x64 / arm64 · deb / AppImage</p>
       </a>
@@ -157,46 +157,48 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
 </footer>
 
 <script>
-  // Platform-aware direct downloads (family standard): point the hero CTA
-  // and the visitor's OS download card at the stable versionless alias,
-  // highlight that card, and switch i18n keys before the language pass
-  // below runs, so the labels match too.
+  // Platform-aware downloads use immutable tagged files, not duplicate
+  // versionless binary aliases. The latest Release page is always usable.
   (function () {
-    var BASE = 'https://github.com/turlamai/payback/releases/latest/download/';
+    var page = 'https://github.com/turlamai/payback/releases/latest';
     var ua = navigator.userAgent;
     var os = /Windows/i.test(ua) ? 'win' : (/Mac|iPhone|iPad/i.test(ua) ? 'mac' : (/Linux|X11/i.test(ua) ? 'linux' : 'mac'));
-    // Linux UAs reveal ARM; macOS UAs do not (frozen at "Intel Mac OS X
-    // 10_15"), so mac defaults to the Apple Silicon build (the majority);
-    // Chromium refines below.
     var arch = os === 'linux' && /aarch64|arm/i.test(ua) ? 'arm64' : (os === 'linux' ? 'x64' : 'arm64');
-    var file = {
-      mac: 'payback-macos-' + arch + '.dmg',
-      win: 'payback-windows-x64.msi',
-      linux: 'payback-linux-' + arch + '.AppImage'
-    }[os];
-    var url = BASE + file;
-    var suffix = { mac: 'mac', win: 'win', linux: 'linux' }[os];
-    document.querySelectorAll('a[data-i18n="hero.download-mac"]').forEach(function (a) {
-      a.href = url;
-      a.setAttribute('data-i18n', 'hero.download-' + suffix);
-    });
+    var release = null;
+    var hero = document.querySelectorAll('a[data-i18n="hero.download-mac"]');
+    var suffix = {mac: 'mac', win: 'win', linux: 'linux'}[os];
+    hero.forEach(function (a) { a.setAttribute('data-i18n', 'hero.download-' + suffix); });
     var card = document.getElementById('dl-' + suffix);
-    if (card) {
-      card.href = url;
-      card.classList.add('dl-current');
+    if (card) card.classList.add('dl-current');
+    function resolve() {
+      var targetSuffix = {mac: 'macos-' + arch + '.dmg', win: 'windows-x64.msi',
+        linux: 'linux-' + (arch === 'x64' ? 'x86_64' : 'aarch64') + '.AppImage'}[os];
+      hero.forEach(function (a) { a.dataset.releaseSuffix = targetSuffix; });
+      if (card) card.dataset.releaseSuffix = targetSuffix;
+      document.querySelectorAll('a[data-release-suffix]').forEach(function (a) {
+        a.href = page;
+        if (!release || release.draft || release.prerelease ||
+            !/^v[0-9]+\\.[0-9]+\\.[0-9]+$/.test(release.tag_name)) return;
+        var name = 'payback-' + release.tag_name.slice(1) + '-' + a.dataset.releaseSuffix;
+        var exact = 'https://github.com/turlamai/payback/releases/download/' + release.tag_name + '/' + name;
+        if ((release.assets || []).some(function (x) {
+          return x.name === name && x.size > 0 && x.browser_download_url === exact;
+        })) a.href = exact;
+      });
     }
-    // Chromium exposes the real CPU arch; refine mac/linux picks when it
-    // does (Safari users keep the default and can find the Intel dmg
-    // under "All releases").
+    resolve();
     if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
       navigator.userAgentData.getHighEntropyValues(['architecture', 'platform']).then(function (h) {
-        if (!h || /Windows/i.test(h.platform || '')) return; // windows ships x64-only
+        if (!h || /Windows/i.test(h.platform || '')) return;
         var a = h.architecture === 'arm' ? 'arm64' : (h.architecture === 'x86' ? 'x64' : null);
-        if (!a || a === arch) return;
-        var f = os === 'mac' ? 'payback-macos-' + a + '.dmg' : 'payback-linux-' + a + '.AppImage';
-        document.querySelectorAll('a[href="' + url + '"]').forEach(function (x) { x.href = BASE + f; });
+        if (a && a !== arch) { arch = a; resolve(); }
       }).catch(function () {});
     }
+    fetch('https://api.github.com/repos/turlamai/payback/releases/latest',
+          {headers: {'Accept': 'application/vnd.github+json'}})
+      .then(function (r) { if (!r.ok) throw new Error('release lookup'); return r.json(); })
+      .then(function (data) { release = data; resolve(); })
+      .catch(function () { /* User can choose an installer on Releases. */ });
   })();
 </script>
 <script>
