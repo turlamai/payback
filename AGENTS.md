@@ -71,7 +71,7 @@ cd ../rivet && git pull origin main    # 本地是 link 安装，pull 即更新
 raco test tests/ && raco rivet build   # 回归 payback
 ```
 
-遇到 rivet 自身的问题**直接提 issue 或 PR** 到 turinglambdaai/rivet（已提：#91 macOS 宿主工作目录修复）。本地 rivet 保持在 main 分支。
+遇到 rivet 自身的问题**直接提 issue 或 PR** 到 turlamai/rivet（已提：#91 macOS 宿主工作目录修复）。本地 rivet 保持在 main 分支。
 
 macOS 打包：`raco rivet package` 产物已自包含（外部库由 `raco ctool` staging 进 `runtime/lib`，宿主启动时切工作目录到 Resources 解析；图标走 `rivet.rktd` 的 `macos-icon`）——**无需任何后处理脚本**（旧 post-package.sh 已随 rivet #81/#91 上游修复退役）。
 

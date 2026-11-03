@@ -33,7 +33,7 @@ struct AboutSheet: View {
                 Link(L10n.t(.aboutWebsite),
                      destination: URL(string: "https://payback.jrtx.site")!)
                 Link(L10n.t(.aboutReportIssue),
-                     destination: URL(string: "https://github.com/turinglambdaai/payback/issues")!)
+                     destination: URL(string: "https://github.com/turlamai/payback/issues")!)
             }
             .font(.caption)
             .tint(PaybackTheme.accent)
