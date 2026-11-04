@@ -9,8 +9,10 @@ permissions:
 env:
   RIVET_PIN: 5b1f3466a6030592d63cec2d7f17f33ac9e1a76a
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Preserve each main push's acceptance evidence while cancelling only
+  # superseded runs for the same PR. GitHub keeps just one pending run/group.
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   windows:
@@ -65,6 +67,10 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v7
+      - name: Guard macOS Cmd+Q rescue contract (offline negative tests)
+        run: |
+          bash -n scripts/e2e/e2e-macos.sh
+          python3 -m unittest discover -s scripts/tests -p 'test_macos_rescue.py'
       - uses: Bogdanp/setup-racket@v1.16
         with: {version: '9.3', architecture: x64, distribution: full, variant: CS}
       # --no-install-recommends: the recommends closure drags in speech
