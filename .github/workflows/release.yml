@@ -168,7 +168,7 @@ jobs:
       - name: Set up embeddable Racket CS
         # Literal pin: `uses:` does not expand env, so this cannot read
         # RIVET_PIN — bump it in tandem with RIVET_PIN (top of file).
-        uses: turlamai/rivet/.github/actions/setup-embed-racket@5b1f3466a6030592d63cec2d7f17f33ac9e1a76a
+        uses: turlamai/rivet/.github/actions/setup-embed-racket@176e79a30a7cc0861f77c91de52290fa1436bb79
       - name: Install Rivet (catalog)
         run: raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#${{ env.RIVET_PIN }}'
       - name: Install GTK toolchain + packaging tools
