@@ -1,326 +1,414 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN" data-kit-id="payback">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Payback — 每一台设备，都在一天天回本</title>
-<meta name="description" content="Payback: 记下购买价格，看着每日使用成本一天天降低；设定心理价位，看回本进度走满。macOS 与 Windows 原生应用。">
-<script>
-  (function () {
-    var t = localStorage.getItem('payback-theme');
-    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    document.documentElement.dataset.theme = t;
-  })();
-</script>
-<link rel="stylesheet" href="styles.css">
-<script>
-var _hmt = _hmt || [];
-(function() {
-  var hm = document.createElement("script");
-  hm.src = "https://hm.baidu.com/hm.js?8e2445912635226bcba0c400bfb6079d";
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(hm, s);
-})();
-</script>
-<style id="product-start-style">
-.product-availability{font-size:.95rem;line-height:1.65;max-width:72ch;margin:18px 0;opacity:.85} .hero .product-availability{margin-left:auto;margin-right:auto}
-.product-start{max-width:1120px;margin:64px auto;padding:32px 24px;border-top:1px solid var(--border,#aaa);font:inherit;line-height:1.65}
-.product-start h2{font-size:clamp(1.7rem,3vw,2.4rem);letter-spacing:-.025em;margin:0 0 16px}.product-start h3{font-size:1.05rem;margin:0 0 10px}.product-start p{margin:0 0 16px;max-width:74ch}.product-start-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin:28px 0}.product-start a{text-decoration:underline;text-underline-offset:4px;overflow-wrap:anywhere}.product-start a:focus-visible{outline:2px solid currentColor;outline-offset:5px}.product-start .start-links{display:flex;gap:16px 24px;flex-wrap:wrap}.product-start .start-status{font-weight:600}.product-start .start-limits{font-size:.95em}
-html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(max-width:700px){.product-start{margin:40px auto;padding:24px 20px}.product-start-grid{grid-template-columns:1fr;gap:18px}}
-</style>
-<style>.lang-menu li.lang-choice{padding:0}.lang-menu .lang-choice button{display:block;width:100%;padding:8px 12px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.lang-menu .lang-choice button:focus-visible{outline:2px solid currentColor;outline-offset:-2px;border-radius:4px}</style>
-<style>
-@media(max-width:700px){.nav-inner{gap:12px}.nav-links{gap:10px;font-size:13px}.nav-links>a[href="#features"],.nav-links>a[href="#how"],.nav-links>a[href^="https://github.com/"]{display:none}.nav-links .lang-btn{padding:6px;font-size:12px}.brand{flex-shrink:0;white-space:nowrap}}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payback — 每一台设备，都在一天天回本</title>
+    <meta name="description" content="Payback: 记下购买价格，看着每日使用成本一天天降低；设定心理价位，看回本进度走满。macOS 与 Windows 原生应用。">
+    <link rel="canonical" href="https://payback.jrtx.site/">
+    <meta name="theme-color" content="#D97757">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Payback">
+    <meta property="og:title" content="Payback — Every device pays itself back">
+    <meta property="og:description" content="Record what you paid and Payback counts the daily cost down day after day. Set a worth-per-day and watch the payback ring fill. Native apps for macOS and Windows, local-first JSON storage.">
+    <meta property="og:url" content="https://payback.jrtx.site/">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Payback — Every device pays itself back">
+    <meta name="twitter:description" content="Record what you paid and watch the daily cost drop, day after day. Native, local-first, free.">
+
+    <!-- Theme + language pre-paint: no flash before the stylesheet paints.
+         Storage keys are the site's historical keys (payback-theme /
+         payback-lang-override-v2) so returning visitors keep preferences. -->
+    <script>
+        (function () {
+            var t;
+            try { t = localStorage.getItem('payback-theme'); } catch (e) {}
+            if (t !== 'dark' && t !== 'light') {
+                t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.dataset.theme = t;
+            var l;
+            try { l = localStorage.getItem('payback-lang-override-v2'); } catch (e) {}
+            if (l !== 'zh' && l !== 'en') {
+                l = (navigator.language || 'zh').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en';
+            }
+            document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
+        })();
+    </script>
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%23D97757'/%3E%3Cpath d='M128 172 L384 340' stroke='%23FFFFFF' stroke-width='36' stroke-linecap='round'/%3E%3Ccircle cx='384' cy='340' r='34' fill='%23FFFFFF'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="family.css">
+    <link rel="stylesheet" href="site.css">
+    <link rel="preload" href="fonts/newsreader-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+    <script src="family.js" defer></script>
 </head>
+
 <body>
-<header class="nav">
-  <div class="nav-inner">
-    <a class="brand" href="#">Payback</a>
-    <nav class="nav-links">
-      <a href="#features" data-i18n="nav.features">功能</a>
-      <a href="#how" data-i18n="nav.how">怎么用</a>
-      <a href="guide.html" data-i18n="nav.guide">手册</a>
-      <a href="#download" data-i18n="nav.download">下载</a>
-      <a href="https://github.com/turlamai/payback" data-i18n="nav.github">GitHub</a>
-      <div class="lang-dropdown-wrapper">
-        <button class="lang-btn" type="button" onclick="void 0" aria-label="Switch language">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          <span id="current-lang-label">English</span>
-        </button>
-        <ul class="lang-menu">
-          <li class="lang-choice"><button type="button" onclick="setLanguage('en')">English</button></li>
-          <li class="lang-choice"><button type="button" onclick="setLanguage('zh')">简体中文</button></li>
-        </ul>
-      </div>
-      <button class="theme-btn" id="theme-btn" type="button" aria-label="Toggle theme">◐</button>
-    </nav>
-  </div>
-</header>
+    <header class="kit-nav">
+        <div class="kit-container kit-nav-inner">
+            <a class="kit-brand" href="/">
+                <svg class="kit-brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="115" fill="#D97757"/><path d="M128 172 L384 340" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/><circle cx="384" cy="340" r="34" fill="#FFFFFF"/></svg>
+                <span>Payback</span>
+            </a>
+            <nav class="kit-nav-links">
+                <a href="#features" data-i18n="nav.features">功能</a>
+                <a href="#how" data-i18n="nav.how">怎么用</a>
+                <a href="guide.html" data-i18n="nav.guide">手册</a>
+                <a href="#download" data-i18n="nav.download">下载</a>
+                <a href="https://github.com/turlamai/payback" data-i18n="nav.github">GitHub</a>
+            </nav>
+            <div class="kit-nav-actions">
+                <div class="kit-lang">
+                    <button class="kit-lang-btn" type="button" aria-haspopup="true" aria-expanded="false">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M1.8 8h12.4M8 1.8c-4.6 4-4.6 8.4 0 12.4 4.6-4 4.6-8.4 0-12.4z"/></svg>
+                        <span class="kit-lang-current">简体中文</span>
+                    </button>
+                    <ul class="kit-lang-menu">
+                        <li><button type="button" data-kit-lang="zh">简体中文</button></li>
+                        <li><button type="button" data-kit-lang="en">English</button></li>
+                    </ul>
+                </div>
+                <button class="kit-icon-btn kit-theme-toggle" type="button" aria-pressed="false" aria-label="Theme">
+                    <svg class="kit-icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="4"/><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6L16 16M16 4l-1.4 1.4M5.4 14.6L4 16"/></svg>
+                    <svg class="kit-icon-moon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
 
-<main>
-  <section class="hero">
-    <p class="eyebrow" data-i18n="hero.eyebrow">开源 · 本地优先 · 原生应用 · 签名自动更新</p>
-    <h1><span data-i18n="hero.h1a">每一台设备，</span><span class="accent" data-i18n="hero.h1b">都在一天天回本</span></h1>
-<p class="reader-en product-availability" lang="en">Development preview. Payback is designated free on every delivered platform. No Pro licences are offered for purchase, and the retired device gate leaves no paywall.</p><p class="reader-zh product-availability" lang="zh">开发预览。Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。</p>
-    <p class="sub" data-i18n="hero.sub">记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。</p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="macos-arm64.dmg" data-i18n="hero.download-mac">下载 macOS 版</a>
-      <a class="btn" href="https://github.com/turlamai/payback/releases" data-i18n="hero.all-releases">全部版本</a>
-      <a class="btn" href="https://github.com/turlamai/payback" data-i18n="hero.source">查看源码</a>
-    </div>
-    <p class="platforms" data-i18n="hero.platforms">macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux（实验性）</p>
-  </section>
+    <main>
+        <!-- Hero -->
+        <section class="kit-hero">
+            <div class="kit-container">
+                <span class="kit-eyebrow" data-i18n="hero.eyebrow">开源 · 本地优先 · 原生应用 · 签名自动更新</span>
+                <h1><span data-i18n="hero.h1a">每一台设备，</span> <span class="kit-accent-word" data-i18n="hero.h1b">都在一天天回本</span></h1>
+                <p class="kit-text-2 pb-availability" data-i18n="hero.availability">开发预览。Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。</p>
+                <p class="kit-lead" data-i18n="hero.lead">记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。</p>
+                <div class="kit-btn-row">
+                    <div class="kit-dl">
+                        <a class="kit-btn kit-btn--primary" data-kit-dl-primary href="https://github.com/turlamai/payback/releases/latest">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 2.5v10M6 9l4 4 4-4M3.5 16.5h13"/></svg>
+                            <span class="kit-dl-label" data-i18n="dl.generic">获取 Payback</span>
+                        </a>
+                        <button class="kit-dl-caret" type="button" aria-haspopup="true" aria-expanded="false" aria-label="All platforms">
+                            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 5.5L7 9.5l4-4"/></svg>
+                        </button>
+                        <ul class="kit-dl-menu">
+                            <li><a href="https://github.com/turlamai/payback/releases/latest" data-kit-dl="mac"><span class="kit-dl-os" data-i18n="dl.mac">macOS 版</span><span class="kit-dl-kind">.dmg</span></a></li>
+                            <li><a href="https://github.com/turlamai/payback/releases/latest" data-kit-dl="win"><span class="kit-dl-os" data-i18n="dl.win">Windows 版</span><span class="kit-dl-kind">.msi</span></a></li>
+                            <li><a href="https://github.com/turlamai/payback/releases/latest" data-kit-dl="linux"><span class="kit-dl-os" data-i18n="dl.linux">Linux 版</span><span class="kit-dl-kind">.AppImage</span></a></li>
+                            <li class="kit-dl-note kit-hidden" data-kit-dl-note data-i18n="dl.note">当前平台请前往 Releases 页面选取对应安装包。</li>
+                        </ul>
+                    </div>
+                    <a class="kit-btn kit-btn--ghost" href="https://github.com/turlamai/payback/releases"><span data-i18n="hero.all-releases">全部版本</span><span class="kit-btn-arrow">›</span></a>
+                    <a class="kit-btn kit-btn--secondary" href="https://github.com/turlamai/payback" data-i18n="hero.cta-source">查看源码</a>
+                </div>
+                <p class="kit-hero-meta"><span class="kit-badge" data-i18n="hero.platforms">macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux（实验性）</span></p>
+            </div>
+        </section>
 
-  <section class="shot-section">
-    <div style="max-width:760px;margin:auto;padding:24px;">
-      <h2 data-i18n="shot.title">添加设备，核对每日成本</h2>
-      <p data-i18n="shot.caption">在设备列表中添加名称、价格和购买日期；保存后核对每日成本，并重新打开应用确认记录仍在。若没有显示，请检查保存结果和日期。</p>
-      <p><a href="guide.html" data-i18n="shot.guide">查看完整的使用与备份指南</a></p>
-    </div>
-  </section>
+        <!-- Add-a-device walkthrough -->
+        <section class="kit-section kit-section--alt" id="shot">
+            <div class="kit-container pb-shot">
+                <span class="kit-kicker" data-i18n="shot.kicker">上手</span>
+                <h2 class="kit-h2" data-i18n="shot.title">添加设备，核对每日成本</h2>
+                <p class="kit-lead" data-i18n="shot.caption">在设备列表中添加名称、价格和购买日期；保存后核对每日成本，并重新打开应用确认记录仍在。若没有显示，请检查保存结果和日期。</p>
+                <p style="margin-top: 20px;"><a href="guide.html" data-i18n="shot.guide">查看完整的使用与备份指南</a></p>
+            </div>
+        </section>
 
-  <section id="features" class="section">
-    <h2 data-i18n="features.title">越用越赚，看得见的数字</h2>
-    <div class="grid">
-      <div class="card">
-        <div class="card-icon">📉</div>
-        <h3 data-i18n="f1.title">每日成本</h3>
-        <p data-i18n="f1.body">价格 ÷ 持有天数，购买当天就算第一天。买来一年的千元机，今天可能只要每天两块钱——而且明天更低。</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">🎯</div>
-        <h3 data-i18n="f2.title">回本进度</h3>
-        <p data-i18n="f2.body">设定你的心理价位：这台设备一天值多少钱？进度环走到 100% 的那一天，它就正式回本了。</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">💰</div>
-        <h3 data-i18n="f3.title">已赚回</h3>
-        <p data-i18n="f3.body">全部设备超出价格的价值加在一起。库房页面里这个绿色数字只增不减——越用越赚的直观证据。</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">🏅</div>
-        <h3 data-i18n="f4.title">里程碑</h3>
-        <p data-i18n="f4.body">百日纪念、陪伴一整年、日均低于 1 元、完全回本……小小的成就徽章，真实的 dopamine。</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">🖥️</div>
-        <h3 data-i18n="f5.title">真原生</h3>
-        <p data-i18n="f5.body">基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3。所有数字一个引擎计算，分毫不差。</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">📦</div>
-        <h3 data-i18n="f6.title">数据可带走</h3>
-        <p data-i18n="f6.body">全部数据是一个人类可读的 JSON 文件，原子写入、随手备份。你的账本永远是你的。</p>
-      </div>
-    </div>
-  </section>
+        <!-- Features -->
+        <section class="kit-section" id="features">
+            <div class="kit-container">
+                <span class="kit-kicker" data-i18n="features.kicker">为什么是 Payback</span>
+                <h2 class="kit-h2" data-i18n="features.title">越用越赚，看得见的数字</h2>
+                <div class="kit-grid kit-grid--3" style="margin-top: 44px;">
+                    <div class="kit-card">
+                        <span class="kit-card-icon pb-emoji" aria-hidden="true">📉</span>
+                        <h3 data-i18n="f1.title">每日成本</h3>
+                        <p data-i18n="f1.body">价格 ÷ 持有天数，购买当天就算第一天。买来一年的千元机，今天可能只要每天两块钱——而且明天更低。</p>
+                    </div>
+                    <div class="kit-card">
+                        <span class="kit-card-icon pb-emoji" aria-hidden="true">🎯</span>
+                        <h3 data-i18n="f2.title">回本进度</h3>
+                        <p data-i18n="f2.body">设定你的心理价位：这台设备一天值多少钱？进度环走到 100% 的那一天，它就正式回本了。</p>
+                    </div>
+                    <div class="kit-card">
+                        <span class="kit-card-icon pb-emoji" aria-hidden="true">💰</span>
+                        <h3 data-i18n="f3.title">已赚回</h3>
+                        <p data-i18n="f3.body">全部设备超出价格的价值加在一起。库房页面里这个绿色数字只增不减——越用越赚的直观证据。</p>
+                    </div>
+                    <div class="kit-card">
+                        <span class="kit-card-icon pb-emoji" aria-hidden="true">🏅</span>
+                        <h3 data-i18n="f4.title">里程碑</h3>
+                        <p data-i18n="f4.body">百日纪念、陪伴一整年、日均低于 1 元、完全回本……小小的成就徽章，真实的 dopamine。</p>
+                    </div>
+                    <div class="kit-card">
+                        <span class="kit-card-icon pb-emoji" aria-hidden="true">🖥️</span>
+                        <h3 data-i18n="f5.title">真原生</h3>
+                        <p data-i18n="f5.body">基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3。所有数字一个引擎计算，分毫不差。</p>
+                    </div>
+                    <div class="kit-card">
+                        <span class="kit-card-icon pb-emoji" aria-hidden="true">📦</span>
+                        <h3 data-i18n="f6.title">数据可带走</h3>
+                        <p data-i18n="f6.body">全部数据是一个人类可读的 JSON 文件，原子写入、随手备份。你的账本永远是你的。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-  <section id="how" class="section alt">
-    <h2 data-i18n="how.title">三步开始</h2>
-    <div class="steps">
-      <div class="step"><span class="step-num">1</span><h3 data-i18n="s1.title">记一笔</h3><p data-i18n="s1.body">设备名、emoji、价格、购买日期，十秒钟记完。想用回本进度就再填一个心理价位。</p></div>
-      <div class="step"><span class="step-num">2</span><h3 data-i18n="s2.title">看着它降</h3><p data-i18n="s2.body">每天打开看一眼：每日成本又低了一点，进度环又走了一格。时间开始为你工作。</p></div>
-      <div class="step"><span class="step-num">3</span><h3 data-i18n="s3.title">等它回本</h3><p data-i18n="s3.body">进度走满的那一刻，Payback 替你宣布：这台设备，从今天起每天都在赚。</p></div>
-    </div>
-    <p class="note" data-i18n="how.note">数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/），随时可以备份带走。</p>
-  </section>
+        <!-- How it works -->
+        <section class="kit-section kit-section--alt" id="how">
+            <div class="kit-container">
+                <span class="kit-kicker" data-i18n="nav.how">怎么用</span>
+                <h2 class="kit-h2" data-i18n="how.title">三步开始</h2>
+                <div class="kit-steps" style="margin-top: 44px;">
+                    <div class="kit-step">
+                        <h3 data-i18n="s1.title">记一笔</h3>
+                        <p data-i18n="s1.body">设备名、emoji、价格、购买日期，十秒钟记完。想用回本进度就再填一个心理价位。</p>
+                    </div>
+                    <div class="kit-step">
+                        <h3 data-i18n="s2.title">看着它降</h3>
+                        <p data-i18n="s2.body">每天打开看一眼：每日成本又低了一点，进度环又走了一格。时间开始为你工作。</p>
+                    </div>
+                    <div class="kit-step">
+                        <h3 data-i18n="s3.title">等它回本</h3>
+                        <p data-i18n="s3.body">进度走满的那一刻，Payback 替你宣布：这台设备，从今天起每天都在赚。</p>
+                    </div>
+                </div>
+                <p class="kit-text-2" style="margin-top: 30px; max-width: 74ch;" data-i18n="how.note">数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/），随时可以备份带走。</p>
+            </div>
+        </section>
 
-  <section id="download" class="section">
-    <h2 data-i18n="download.title">下载</h2>
-    <div class="dl-grid">
-      <a class="dl-card" id="dl-mac" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="macos-arm64.dmg">
-        <h3>macOS</h3>
-        <p data-i18n="dl.mac">14+ · Apple Silicon / Intel · DMG</p>
-      </a>
-      <a class="dl-card" id="dl-win" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="windows-x64.msi">
-        <h3>Windows</h3>
-        <p data-i18n="dl.win">10+ · x64 · MSI</p>
-      </a>
-      <a class="dl-card" id="dl-linux" href="https://github.com/turlamai/payback/releases/latest" data-release-suffix="linux-x86_64.AppImage">
-        <h3>Linux</h3>
-        <p data-i18n="dl.linux">实验性 · x64 / arm64 · deb / AppImage</p>
-      </a>
-    </div>
-    <p class="note"><a class="dl-all" href="https://github.com/turlamai/payback/releases" data-i18n="download.all-releases">全部版本与历史下载（Intel DMG · rpm · tar.gz）</a></p>
-    <p class="note" data-i18n="download.note">首次启动（未公证构建）：右键 → 打开。更新通过 Ed25519 签名清单自动推送，应用内「检查更新」随时可用。</p>
-    <p class="note pricing-note" data-i18n="download.pricing">所有已交付版本永久免费。旧版本的设备门禁正在退役，当前实现边界见产品政策。</p>
-  </section>
-<p style="text-align:center;padding:1rem"><a href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.md">使用与帮助 / Usage & help</a></p>
-<section id="start-here" class="product-start" aria-label="Get started / 开始使用">
-<h2 class="reader-en " lang="en">Start with one useful session.</h2><h2 class="reader-zh " lang="zh">从一次有效使用开始。</h2><p class="reader-en start-status" lang="en">Payback is designated free on every delivered platform. No Pro licences are offered for purchase, and the retired device gate leaves no paywall.</p><p class="reader-zh start-status" lang="zh">Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。</p><p class="reader-en " lang="en">Desktop previews for macOS, Windows and Linux; mobile is not a current delivery.</p><p class="reader-zh " lang="zh">提供 macOS、Windows、Linux 桌面预览版；移动端尚未交付。</p><div class="product-start-grid"><article><h3 class="reader-en " lang="en">01</h3><h3 class="reader-zh " lang="zh">01</h3><p class="reader-en " lang="en">Add a sample device, its purchase price, currency and purchase date.</p><p class="reader-zh " lang="zh">添加示例设备，填写购买价格、币种和日期。</p></article><article><h3 class="reader-en " lang="en">02</h3><h3 class="reader-zh " lang="zh">02</h3><p class="reader-en " lang="en">Optionally set a personal worth-per-day, then check the individual device calculation. This is a personal estimate, not investment income.</p><p class="reader-zh " lang="zh">可设置每天愿意付出的价值，核对单个设备计算；这属于个人估算，不是投资收益。</p></article><article><h3 class="reader-en " lang="en">03</h3><h3 class="reader-zh " lang="zh">03</h3><p class="reader-en " lang="en">Reopen the app to check persistence before importing your full inventory or enabling a shared folder.</p><p class="reader-zh " lang="zh">重新打开应用确认保存结果，再录入完整设备库或启用共享文件夹。</p></article></div><p class="reader-en start-limits" lang="en">Mixed-currency totals are currently unsafe (<a href="https://github.com/turlamai/payback/issues/23">#23</a>); use one currency and check per-device amounts. GTK date entry has a known ISO-date defect (<a href="https://github.com/turlamai/payback/issues/22">#22</a>).</p><p class="reader-zh start-limits" lang="zh">跨币种汇总目前不可靠（<a href="https://github.com/turlamai/payback/issues/23">#23</a>），请保持同一币种并核对单设备金额。GTK 日期输入存在已知 ISO 日期缺陷（<a href="https://github.com/turlamai/payback/issues/22">#22</a>）。</p><div class="start-links"><a class="reader-en" lang="en" href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.md">Installation, privacy &amp; recovery</a><a class="reader-zh" lang="zh" href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.zh-CN.md">安装、隐私与恢复</a><a href="https://github.com/turlamai/payback/issues"><span class="reader-en " lang="en">Get help</span><span class="reader-zh " lang="zh">反馈与帮助</span></a></div>
-</section>
-</main>
+        <!-- Download -->
+        <section class="kit-section" id="download">
+            <div class="kit-container">
+                <span class="kit-kicker" data-i18n="download.kicker">安装包与更新</span>
+                <h2 class="kit-h2" data-i18n="download.title">下载</h2>
+                <div class="kit-grid kit-grid--3" style="margin-top: 44px;">
+                    <a class="kit-card pb-dl-card" data-kit-dl="mac" href="https://github.com/turlamai/payback/releases/latest">
+                        <h3>macOS</h3>
+                        <p data-i18n="dl.mac-body">14+ · Apple Silicon / Intel · DMG</p>
+                    </a>
+                    <a class="kit-card pb-dl-card" data-kit-dl="win" href="https://github.com/turlamai/payback/releases/latest">
+                        <h3>Windows</h3>
+                        <p data-i18n="dl.win-body">10+ · x64 · MSI</p>
+                    </a>
+                    <a class="kit-card pb-dl-card" data-kit-dl="linux" href="https://github.com/turlamai/payback/releases/latest">
+                        <h3>Linux</h3>
+                        <p data-i18n="dl.linux-body">实验性 · x64 / arm64 · deb / AppImage</p>
+                    </a>
+                </div>
+                <p class="kit-text-2" style="margin-top: 30px;"><a class="pb-dl-all" href="https://github.com/turlamai/payback/releases" data-i18n="download.all-releases">全部版本与历史下载（Intel DMG · rpm · tar.gz）</a></p>
+                <p class="kit-text-2" style="margin-top: 14px; max-width: 74ch;" data-i18n="download.note">首次启动（未公证构建）：右键 → 打开。更新通过 Ed25519 签名清单自动推送，应用内「检查更新」随时可用。</p>
+                <p class="kit-text-2" style="margin-top: 14px; max-width: 74ch;" data-i18n="download.pricing">所有已交付版本永久免费。旧版本的设备门禁正在退役，当前实现边界见产品政策。</p>
+            </div>
+        </section>
 
-<footer class="footer">
-  <p>Payback · <a href="https://github.com/turlamai/payback">GitHub</a> · <a href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.md" data-i18n="footer.pricing">产品政策与兼容</a> · MIT · <span data-i18n="footer.built">基于 Rivet 构建</span></p>
-</footer>
+        <!-- Get started -->
+        <section class="kit-section kit-section--alt" id="start-here">
+            <div class="kit-container">
+                <span class="kit-kicker" data-i18n="start.kicker">开始使用</span>
+                <h2 class="kit-h2" data-i18n="start.title">从一次有效使用开始。</h2>
+                <p class="kit-lead" style="margin-top: 18px;"><span class="kit-badge" data-i18n="start.status">Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。</span> <span data-i18n="start.platforms">提供 macOS、Windows、Linux 桌面预览版；移动端尚未交付。</span></p>
+                <div class="kit-steps" style="margin-top: 44px;">
+                    <div class="kit-step">
+                        <p data-i18n="start.s1.body">添加示例设备，填写购买价格、币种和日期。</p>
+                    </div>
+                    <div class="kit-step">
+                        <p data-i18n="start.s2.body">可设置每天愿意付出的价值，核对单个设备计算；这属于个人估算，不是投资收益。</p>
+                    </div>
+                    <div class="kit-step">
+                        <p data-i18n="start.s3.body">重新打开应用确认保存结果，再录入完整设备库或启用共享文件夹。</p>
+                    </div>
+                </div>
+                <p class="kit-text-2" style="margin-top: 30px; max-width: 62ch;"><span data-i18n="start.limits-a">跨币种汇总目前不可靠（</span><a href="https://github.com/turlamai/payback/issues/23">#23</a><span data-i18n="start.limits-b">），请保持同一币种并核对单设备金额。GTK 日期输入存在已知 ISO 日期缺陷（</span><a href="https://github.com/turlamai/payback/issues/22">#22</a><span data-i18n="start.limits-c">）。</span></p>
+                <div class="pb-start-links">
+                    <a href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.zh-CN.md" data-en-href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.md" data-i18n="start.guide">安装、隐私与恢复</a>
+                    <a href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.md" data-i18n="start.usage">使用与帮助</a>
+                    <a href="https://github.com/turlamai/payback/issues" data-i18n="start.help">反馈与帮助</a>
+                </div>
+            </div>
+        </section>
+    </main>
 
-<script>
-  // Platform-aware downloads use immutable tagged files, not duplicate
-  // versionless binary aliases. The latest Release page is always usable.
-  (function () {
-    var page = 'https://github.com/turlamai/payback/releases/latest';
-    var ua = navigator.userAgent;
-    var os = /Windows/i.test(ua) ? 'win' : (/Mac|iPhone|iPad/i.test(ua) ? 'mac' : (/Linux|X11/i.test(ua) ? 'linux' : 'mac'));
-    var arch = os === 'linux' && /aarch64|arm/i.test(ua) ? 'arm64' : (os === 'linux' ? 'x64' : 'arm64');
-    var release = null;
-    var hero = document.querySelectorAll('a[data-i18n="hero.download-mac"]');
-    var suffix = {mac: 'mac', win: 'win', linux: 'linux'}[os];
-    hero.forEach(function (a) { a.setAttribute('data-i18n', 'hero.download-' + suffix); });
-    var card = document.getElementById('dl-' + suffix);
-    if (card) card.classList.add('dl-current');
-    function resolve() {
-      var targetSuffix = {mac: 'macos-' + arch + '.dmg', win: 'windows-x64.msi',
-        linux: 'linux-' + (arch === 'x64' ? 'x86_64' : 'aarch64') + '.AppImage'}[os];
-      hero.forEach(function (a) { a.dataset.releaseSuffix = targetSuffix; });
-      if (card) card.dataset.releaseSuffix = targetSuffix;
-      document.querySelectorAll('a[data-release-suffix]').forEach(function (a) {
-        a.href = page;
-        if (!release || release.draft || release.prerelease ||
-            !/^v[0-9]+\.[0-9]+\.[0-9]+$/.test(release.tag_name)) return;
-        var name = 'payback-' + release.tag_name.slice(1) + '-' + a.dataset.releaseSuffix;
-        var exact = 'https://github.com/turlamai/payback/releases/download/' + release.tag_name + '/' + name;
-        if ((release.assets || []).some(function (x) {
-          return x.name === name && x.size > 0 && x.browser_download_url === exact;
-        })) a.href = exact;
-      });
-    }
-    resolve();
-    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
-      navigator.userAgentData.getHighEntropyValues(['architecture', 'platform']).then(function (h) {
-        if (!h || /Windows/i.test(h.platform || '')) return;
-        var a = h.architecture === 'arm' ? 'arm64' : (h.architecture === 'x86' ? 'x64' : null);
-        if (a && a !== arch) { arch = a; resolve(); }
-      }).catch(function () {});
-    }
-    fetch('https://api.github.com/repos/turlamai/payback/releases/latest',
-          {headers: {'Accept': 'application/vnd.github+json'}})
-      .then(function (r) { if (!r.ok) throw new Error('release lookup'); return r.json(); })
-      .then(function (data) { release = data; resolve(); })
-      .catch(function () { /* User can choose an installer on Releases. */ });
-  })();
-</script>
-<script>
-(function () {
-  var zh = {
-    "nav.features": "功能", "nav.how": "怎么用", "nav.guide": "手册", "nav.download": "下载", "nav.github": "GitHub",
-    "shot.title": "添加设备，核对每日成本",
-    "shot.caption": "在设备列表中添加名称、价格和购买日期；保存后核对每日成本，并重新打开应用确认记录仍在。若没有显示，请检查保存结果和日期。",
-    "shot.guide": "查看完整的使用与备份指南",
-    "hero.eyebrow": "开源 · 本地优先 · 原生应用 · 签名自动更新",
-    "hero.h1a": "每一台设备，", "hero.h1b": "都在一天天回本",
-    "hero.sub": "记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。",
-    "hero.download-mac": "下载 macOS 版", "hero.download-win": "下载 Windows 版", "hero.download-linux": "下载 Linux 版",
-    "hero.all-releases": "全部版本", "hero.source": "查看源码",
-    "hero.platforms": "macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux（实验性）",
-    "features.title": "越用越赚，看得见的数字",
-    "f1.title": "每日成本", "f1.body": "价格 ÷ 持有天数，购买当天就算第一天。买来一年的千元机，今天可能只要每天两块钱——而且明天更低。",
-    "f2.title": "回本进度", "f2.body": "设定你的心理价位：这台设备一天值多少钱？进度环走到 100% 的那一天，它就正式回本了。",
-    "f3.title": "已赚回", "f3.body": "全部设备超出价格的价值加在一起。库房页面里这个绿色数字只增不减——越用越赚的直观证据。",
-    "f4.title": "里程碑", "f4.body": "百日纪念、陪伴一整年、日均低于 1 元、完全回本……小小的成就徽章，真实的 dopamine。",
-    "f5.title": "真原生", "f5.body": "基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3。所有数字一个引擎计算，分毫不差。",
-    "f6.title": "数据可带走", "f6.body": "全部数据是一个人类可读的 JSON 文件，原子写入、随手备份。你的账本永远是你的。",
-    "how.title": "三步开始",
-    "s1.title": "记一笔", "s1.body": "设备名、emoji、价格、购买日期，十秒钟记完。想用回本进度就再填一个心理价位。",
-    "s2.title": "看着它降", "s2.body": "每天打开看一眼：每日成本又低了一点，进度环又走了一格。时间开始为你工作。",
-    "s3.title": "等它回本", "s3.body": "进度走满的那一刻，Payback 替你宣布：这台设备，从今天起每天都在赚。",
-    "how.note": "数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/），随时可以备份带走。",
-    "download.title": "下载",
-    "dl.mac": "14+ · Apple Silicon / Intel · DMG",
-    "dl.win": "10+ · x64 · MSI",
-    "dl.linux": "实验性 · x64 / arm64 · deb / AppImage",
-    "download.all-releases": "全部版本与历史下载（Intel DMG · rpm · tar.gz）",
-    "download.note": "首次启动（未公证构建）：右键 → 打开。更新通过 Ed25519 签名清单自动推送，应用内「检查更新」随时可用。",
-    "download.pricing": "所有已交付版本永久免费。旧版本的设备门禁正在退役，当前实现边界见产品政策。",
-    "footer.pricing": "产品政策与兼容",
-    "footer.built": "基于 Rivet 构建"
-  };
-  var en = {
-    "nav.features": "Features", "nav.how": "How it works", "nav.guide": "Manual", "nav.download": "Download", "nav.github": "GitHub",
-    "shot.title": "Add a device and verify its daily cost",
-    "shot.caption": "Add a device name, price and purchase date; verify its daily cost after saving, then reopen the app and confirm the entry persists. If absent, check the save result and date.",
-    "shot.guide": "Read the complete user and backup guide",
-    "hero.eyebrow": "Open source · Local-first · Native apps · Signed updates",
-    "hero.h1a": "Watch every device ", "hero.h1b": "pay itself back",
-    "hero.sub": "Record what you paid and Payback counts the daily cost down, day after day. Set what a day with the device is worth to you, and watch the payback ring fill up — turning every impulse buy into a visible investment.",
-    "hero.download-mac": "Download for macOS", "hero.download-win": "Download for Windows", "hero.download-linux": "Download for Linux",
-    "hero.all-releases": "All releases", "hero.source": "View source",
-    "hero.platforms": "macOS 14+ (Apple Silicon / Intel) · Windows 10+ · Linux (experimental)",
-    "features.title": "Value you can see",
-    "f1.title": "Daily cost", "f1.body": "Price ÷ days held, counting the purchase day as day one. A phone that cost a thousand might be down to two a day already — and tomorrow it's lower.",
-    "f2.title": "Payback progress", "f2.body": "Set your worth-per-day: what is one day with this device worth to you? The day the ring hits 100%, it has officially paid itself back.",
-    "f3.title": "Earned back", "f3.body": "Value gained beyond the price, summed across your whole library. The green number that only goes up — proof that using things pays.",
-    "f4.title": "Milestones", "f4.body": "100 days together, a full year, daily cost under 1, fully paid back… small badges, real dopamine.",
-    "f5.title": "Truly native", "f5.body": "Built on Rivet: one Racket core embedded in-process, SwiftUI on macOS, WinUI 3 on Windows. Every number computed by the same engine, to the cent.",
-    "f6.title": "Your data, portable", "f6.body": "Everything lives in one human-readable JSON file with atomic writes. Back it up, take it with you — the ledger is yours.",
-    "how.title": "Three steps",
-    "s1.title": "Log it", "s1.body": "Name, emoji, price, purchase date — ten seconds. Add a worth-per-day if you want the payback ring.",
-    "s2.title": "Watch it drop", "s2.body": "Open it each day: the daily cost is a little lower, the ring a little fuller. Time starts working for you.",
-    "s3.title": "Break even", "s3.body": "The day the ring fills, Payback announces it: from today, this device earns.",
-    "how.note": "Data lives in a local JSON file (macOS: ~/Library/Application Support/Payback/, Windows: %APPDATA%/Payback/). Back it up anytime.",
-    "download.title": "Download",
-    "dl.mac": "14+ · Apple Silicon / Intel · DMG",
-    "dl.win": "10+ · x64 · MSI",
-    "dl.linux": "Experimental · x64 / arm64 · deb / AppImage",
-    "download.all-releases": "All releases & downloads (Intel DMG · rpm · tar.gz)",
-    "download.note": "First launch (unsigned build): right-click → Open. Updates ship automatically via Ed25519-signed manifests; “Check for Updates” works in-app.",
-    "download.pricing": "All delivered editions remain free. See the product policy for retirement of the legacy device gate and compatibility.",
-    "footer.pricing": "Policy & compatibility",
-    "footer.built": "Built with Rivet"
-  };
-  // language dropdown: unified family policy (explicit choice wins; otherwise browser locale)
-  var LANGUAGE_OVERRIDE_KEY = "payback-lang-override-v2";
-  var LANGUAGE_LEGACY_KEYS = ["payback-lang", "site-lang"];
-  var current, isZh;
+    <footer class="kit-footer">
+        <div class="kit-container">
+            <div class="kit-footer-grid">
+                <div>
+                    <a class="kit-brand" href="/">
+                        <svg class="kit-brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="115" fill="#D97757"/><path d="M128 172 L384 340" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/><circle cx="384" cy="340" r="34" fill="#FFFFFF"/></svg>
+                        <span>Payback</span>
+                    </a>
+                    <p class="kit-footer-tagline" data-i18n="footer.tagline">每一台设备，都在一天天回本。</p>
+                    <p style="margin-top: 12px;"><span class="kit-chip" data-i18n="footer.built">基于 Rivet 构建</span></p>
+                </div>
+                <div>
+                    <h4 data-i18n="footer.product">产品</h4>
+                    <ul>
+                        <li><a href="#features" data-i18n="nav.features">功能</a></li>
+                        <li><a href="guide.html" data-i18n="nav.guide">手册</a></li>
+                        <li><a href="https://github.com/turlamai/payback/releases" data-i18n="footer.releases">版本发布</a></li>
+                        <li><a href="https://github.com/turlamai/payback/blob/main/docs/USER-GUIDE.md" data-i18n="footer.pricing">产品政策与兼容</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 data-i18n="footer.family">家族</h4>
+                    <ul>
+                        <li><a href="https://jrtx.site/" data-i18n="footer.portal">全部产品</a></li>
+                        <li><a href="https://rivet.jrtx.site">Rivet</a></li>
+                        <li><a href="https://glaze.jrtx.site">Glaze</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 data-i18n="footer.legal">条款</h4>
+                    <ul>
+                        <li><a href="https://github.com/turlamai/payback" data-i18n="nav.github">GitHub</a></li>
+                        <li><a href="https://github.com/turlamai/payback/blob/main/LICENSE" data-i18n="footer.license">许可协议</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="kit-footer-bottom">
+                <span data-i18n="footer.copyright">© 2026 TuringLambda AI · MIT</span>
+                <span class="kit-mono">site-kit v1.0.2</span>
+            </div>
+        </div>
+    </footer>
 
-  function readLanguageOverride() {
-    try {
-      var v = localStorage.getItem(LANGUAGE_OVERRIDE_KEY);
-      if (v !== "zh" && v !== "en") {
-        for (var i = 0; i < LANGUAGE_LEGACY_KEYS.length; i++) {
-          var legacy = localStorage.getItem(LANGUAGE_LEGACY_KEYS[i]);
-          if (legacy === "zh" || legacy === "en") { v = legacy; try { localStorage.setItem(LANGUAGE_OVERRIDE_KEY, v); } catch (e) {} break; }
+    <script type="application/json" id="kit-i18n">
+    {
+        "zh": {
+            "nav.features": "功能", "nav.how": "怎么用", "nav.guide": "手册", "nav.download": "下载", "nav.github": "GitHub",
+            "hero.eyebrow": "开源 · 本地优先 · 原生应用 · 签名自动更新",
+            "hero.h1a": "每一台设备，",
+            "hero.h1b": "都在一天天回本",
+            "hero.availability": "开发预览。Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。",
+            "hero.lead": "记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。",
+            "hero.all-releases": "全部版本",
+            "hero.cta-source": "查看源码",
+            "hero.platforms": "macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux（实验性）",
+            "shot.kicker": "上手",
+            "shot.title": "添加设备，核对每日成本",
+            "shot.caption": "在设备列表中添加名称、价格和购买日期；保存后核对每日成本，并重新打开应用确认记录仍在。若没有显示，请检查保存结果和日期。",
+            "shot.guide": "查看完整的使用与备份指南",
+            "features.kicker": "为什么是 Payback",
+            "features.title": "越用越赚，看得见的数字",
+            "f1.title": "每日成本", "f1.body": "价格 ÷ 持有天数，购买当天就算第一天。买来一年的千元机，今天可能只要每天两块钱——而且明天更低。",
+            "f2.title": "回本进度", "f2.body": "设定你的心理价位：这台设备一天值多少钱？进度环走到 100% 的那一天，它就正式回本了。",
+            "f3.title": "已赚回", "f3.body": "全部设备超出价格的价值加在一起。库房页面里这个绿色数字只增不减——越用越赚的直观证据。",
+            "f4.title": "里程碑", "f4.body": "百日纪念、陪伴一整年、日均低于 1 元、完全回本……小小的成就徽章，真实的 dopamine。",
+            "f5.title": "真原生", "f5.body": "基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3。所有数字一个引擎计算，分毫不差。",
+            "f6.title": "数据可带走", "f6.body": "全部数据是一个人类可读的 JSON 文件，原子写入、随手备份。你的账本永远是你的。",
+            "how.title": "三步开始",
+            "s1.title": "记一笔", "s1.body": "设备名、emoji、价格、购买日期，十秒钟记完。想用回本进度就再填一个心理价位。",
+            "s2.title": "看着它降", "s2.body": "每天打开看一眼：每日成本又低了一点，进度环又走了一格。时间开始为你工作。",
+            "s3.title": "等它回本", "s3.body": "进度走满的那一刻，Payback 替你宣布：这台设备，从今天起每天都在赚。",
+            "how.note": "数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/），随时可以备份带走。",
+            "download.kicker": "安装包与更新",
+            "download.title": "下载",
+            "dl.generic": "获取 Payback",
+            "dl.mac": "macOS 版", "dl.win": "Windows 版", "dl.linux": "Linux 版",
+            "dl.note": "当前平台请前往 Releases 页面选取对应安装包。",
+            "dl.mac-body": "14+ · Apple Silicon / Intel · DMG",
+            "dl.win-body": "10+ · x64 · MSI",
+            "dl.linux-body": "实验性 · x64 / arm64 · deb / AppImage",
+            "download.all-releases": "全部版本与历史下载（Intel DMG · rpm · tar.gz）",
+            "download.note": "首次启动（未公证构建）：右键 → 打开。更新通过 Ed25519 签名清单自动推送，应用内「检查更新」随时可用。",
+            "download.pricing": "所有已交付版本永久免费。旧版本的设备门禁正在退役，当前实现边界见产品政策。",
+            "start.kicker": "开始使用",
+            "start.title": "从一次有效使用开始。",
+            "start.status": "Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。",
+            "start.platforms": "提供 macOS、Windows、Linux 桌面预览版；移动端尚未交付。",
+            "start.s1.body": "添加示例设备，填写购买价格、币种和日期。",
+            "start.s2.body": "可设置每天愿意付出的价值，核对单个设备计算；这属于个人估算，不是投资收益。",
+            "start.s3.body": "重新打开应用确认保存结果，再录入完整设备库或启用共享文件夹。",
+            "start.limits-a": "跨币种汇总目前不可靠（",
+            "start.limits-b": "），请保持同一币种并核对单设备金额。GTK 日期输入存在已知 ISO 日期缺陷（",
+            "start.limits-c": "）。",
+            "start.guide": "安装、隐私与恢复",
+            "start.usage": "使用与帮助",
+            "start.help": "反馈与帮助",
+            "footer.tagline": "每一台设备，都在一天天回本。",
+            "footer.built": "基于 Rivet 构建",
+            "footer.product": "产品", "footer.family": "家族", "footer.legal": "条款",
+            "footer.releases": "版本发布", "footer.portal": "全部产品", "footer.license": "许可协议",
+            "footer.pricing": "产品政策与兼容",
+            "footer.copyright": "© 2026 TuringLambda AI · MIT"
+        },
+        "en": {
+            "nav.features": "Features", "nav.how": "How it works", "nav.guide": "Manual", "nav.download": "Download", "nav.github": "GitHub",
+            "hero.eyebrow": "Open source · Local-first · Native apps · Signed updates",
+            "hero.h1a": "Watch every device ",
+            "hero.h1b": "pay itself back",
+            "hero.availability": "Development preview. Payback is designated free on every delivered platform. No Pro licences are offered for purchase, and the retired device gate leaves no paywall.",
+            "hero.lead": "Record what you paid and Payback counts the daily cost down, day after day. Set what a day with the device is worth to you, and watch the payback ring fill up — turning every impulse buy into a visible investment.",
+            "hero.all-releases": "All releases",
+            "hero.cta-source": "View source",
+            "hero.platforms": "macOS 14+ (Apple Silicon / Intel) · Windows 10+ · Linux (experimental)",
+            "shot.kicker": "Quick start",
+            "shot.title": "Add a device and verify its daily cost",
+            "shot.caption": "Add a device name, price and purchase date; verify its daily cost after saving, then reopen the app and confirm the entry persists. If absent, check the save result and date.",
+            "shot.guide": "Read the complete user and backup guide",
+            "features.kicker": "Why Payback",
+            "features.title": "Value you can see",
+            "f1.title": "Daily cost", "f1.body": "Price ÷ days held, counting the purchase day as day one. A phone that cost a thousand might be down to two a day already — and tomorrow it's lower.",
+            "f2.title": "Payback progress", "f2.body": "Set your worth-per-day: what is one day with this device worth to you? The day the ring hits 100%, it has officially paid itself back.",
+            "f3.title": "Earned back", "f3.body": "Value gained beyond the price, summed across your whole library. The green number that only goes up — proof that using things pays.",
+            "f4.title": "Milestones", "f4.body": "100 days together, a full year, daily cost under 1, fully paid back… small badges, real dopamine.",
+            "f5.title": "Truly native", "f5.body": "Built on Rivet: one Racket core embedded in-process, SwiftUI on macOS, WinUI 3 on Windows. Every number computed by the same engine, to the cent.",
+            "f6.title": "Your data, portable", "f6.body": "Everything lives in one human-readable JSON file with atomic writes. Back it up, take it with you — the ledger is yours.",
+            "how.title": "Three steps",
+            "s1.title": "Log it", "s1.body": "Name, emoji, price, purchase date — ten seconds. Add a worth-per-day if you want the payback ring.",
+            "s2.title": "Watch it drop", "s2.body": "Open it each day: the daily cost is a little lower, the ring a little fuller. Time starts working for you.",
+            "s3.title": "Break even", "s3.body": "The day the ring fills, Payback announces it: from today, this device earns.",
+            "how.note": "Data lives in a local JSON file (macOS: ~/Library/Application Support/Payback/, Windows: %APPDATA%/Payback/). Back it up anytime.",
+            "download.kicker": "Installers & updates",
+            "download.title": "Download",
+            "dl.generic": "Get Payback",
+            "dl.mac": "For macOS", "dl.win": "For Windows", "dl.linux": "For Linux",
+            "dl.note": "Pick the right package from the Releases page for your platform.",
+            "dl.mac-body": "14+ · Apple Silicon / Intel · DMG",
+            "dl.win-body": "10+ · x64 · MSI",
+            "dl.linux-body": "Experimental · x64 / arm64 · deb / AppImage",
+            "download.all-releases": "All releases & downloads (Intel DMG · rpm · tar.gz)",
+            "download.note": "First launch (unsigned build): right-click → Open. Updates ship automatically via Ed25519-signed manifests; “Check for Updates” works in-app.",
+            "download.pricing": "All delivered editions remain free. See the product policy for retirement of the legacy device gate and compatibility.",
+            "start.kicker": "Get started",
+            "start.title": "Start with one useful session.",
+            "start.status": "Payback is designated free on every delivered platform. No Pro licences are offered for purchase, and the retired device gate leaves no paywall.",
+            "start.platforms": "Desktop previews for macOS, Windows and Linux; mobile is not a current delivery.",
+            "start.s1.body": "Add a sample device, its purchase price, currency and purchase date.",
+            "start.s2.body": "Optionally set a personal worth-per-day, then check the individual device calculation. This is a personal estimate, not investment income.",
+            "start.s3.body": "Reopen the app to check persistence before importing your full inventory or enabling a shared folder.",
+            "start.limits-a": "Mixed-currency totals are currently unsafe (",
+            "start.limits-b": "); use one currency and check per-device amounts. GTK date entry has a known ISO-date defect (",
+            "start.limits-c": ").",
+            "start.guide": "Installation, privacy & recovery",
+            "start.usage": "Usage & help",
+            "start.help": "Get help",
+            "footer.tagline": "Every device pays itself back.",
+            "footer.built": "Built with Rivet",
+            "footer.product": "Product", "footer.family": "Family", "footer.legal": "Legal",
+            "footer.releases": "Releases", "footer.portal": "All products", "footer.license": "License",
+            "footer.pricing": "Policy & compatibility",
+            "footer.copyright": "© 2026 TuringLambda AI · MIT"
         }
-      }
-      return v === "zh" || v === "en" ? v : null;
-    } catch (e) { return null; }
-  }
-  function detectBrowserLanguage() {
-    var locale = (navigator.languages && navigator.languages[0]) || navigator.language || "";
-    return String(locale).toLowerCase().indexOf("zh") === 0 ? "zh" : "en";
-  }
-  function apply(lang) {
-    current = lang === "en" ? en : zh;
-    isZh = lang === "zh";
-    document.documentElement.lang = isZh ? "zh-CN" : "en";
-    document.documentElement.setAttribute("data-language", lang);
-    var nodes = document.querySelectorAll("[data-i18n]");
-    for (var i = 0; i < nodes.length; i++) {
-      var key = nodes[i].getAttribute("data-i18n");
-      if (current[key]) nodes[i].textContent = current[key];
     }
-    var label = document.getElementById("current-lang-label");
-    if (label) label.textContent = isZh ? "简体中文" : "English";
-  }
-  window.setLanguage = function (lang) {
-    if (lang !== "zh" && lang !== "en") return;
-    try { localStorage.setItem(LANGUAGE_OVERRIDE_KEY, lang); } catch (e) {}
-    apply(lang);
-  };
-  apply(readLanguageOverride() || detectBrowserLanguage());
-  LANGUAGE_LEGACY_KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
-  window.addEventListener("languagechange", function () {
-    if (!readLanguageOverride()) apply(detectBrowserLanguage());
-  });
-})();
-</script>
-<script>
-  document.getElementById('theme-btn').addEventListener('click', function () {
-    var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem('payback-theme', next);
-  });
-</script>
+    </script>
+
+    <script type="application/json" id="kit-download">
+    {
+        "repo": "turlamai/payback",
+        "assets": {
+            "mac": "payback-{v}-macos-{arch}.dmg",
+            "win": "payback-{v}-windows-x64.msi",
+            "linux": "payback-{v}-linux-{arch}.AppImage"
+        },
+        "archMap": { "linux": { "x64": "x86_64", "arm64": "aarch64" } }
+    }
+    </script>
 </body>
+
 </html>

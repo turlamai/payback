@@ -1,0 +1,35 @@
+/* ============================================================
+   Payback site.css — per-site sections only.
+   Shared frame lives in family.css (site-kit); do not duplicate.
+   ============================================================ */
+
+/* Emoji feature icons keep their original character marks. */
+.pb-emoji { font-size: 19px; line-height: 1; }
+
+/* Download cards are anchors styled as kit cards. */
+a.pb-dl-card { display: block; color: inherit; }
+a.pb-dl-card h3 { margin-bottom: 4px; }
+.pb-dl-all { text-decoration: underline; text-underline-offset: 4px; }
+
+/* Narrow centered walkthrough copy. */
+.pb-shot { max-width: 760px; }
+
+/* Start-section inline link row. */
+.pb-start-links {
+    display: flex;
+    gap: 16px 24px;
+    flex-wrap: wrap;
+    margin-top: 28px;
+}
+
+/* Hero availability line (kept from the old page, under the headline). */
+.pb-availability {
+    max-width: 64ch;
+    margin: 22px auto 0;
+    font-size: 14.5px;
+    line-height: 1.7;
+}
+
+/* ---------- Icon visibility per theme ---------- */
+html[data-theme="light"] .kit-icon-moon { display: none; }
+html[data-theme="dark"] .kit-icon-sun { display: none; }
