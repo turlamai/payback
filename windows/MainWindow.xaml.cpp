@@ -341,8 +341,9 @@ void MainWindow::RenderDocument(std::vector<std::uint8_t> const& payload) {
 
   ReportFailedInstall();
 
-  // the backend throttles checks to once a day; a launch-time check stays
-  // silent unless an update is available (then the consent dialog shows)
+  // the backend throttles auto-checks to once every 4 hours; a launch-time
+  // check stays silent unless an update is available (then the consent
+  // dialog shows)
   if (!auto_check_done_) {
     auto_check_done_ = true;
     if (document_.update_auto_check) {
