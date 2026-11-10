@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Payback
+Comment=Count every device's daily cost down to its payback day
+Exec=RivetHost
+Icon=site.jrtx.payback
+Terminal=false
+Categories=Utility;
+StartupWMClass=Payback
