@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Payback — 设备库（英雄屏：非模态分栏，回本进行态）</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== library 页面专属：侧栏 + 详情窗格 ==== */
+  .body { flex: 1; display: flex; min-height: 0; }
+  .sidebar { width: 300px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .summary { padding: 12px 14px 4px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .quip { display: flex; align-items: center; gap: 6px; padding: 9px 6px 10px; font-size: 12px; color: var(--mute); }
+  .quip .star { color: var(--accent); }
+  .list { flex: 1; overflow-y: auto; padding: 4px 8px 10px; border-top: 1px solid var(--line); }
+  .dev-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; user-select: none; transition: background .12s ease; }
+  .dev-row:hover { background: color-mix(in srgb, var(--hover) 55%, transparent); }
+  .dev-row.selected { background: var(--hover); }
+  .dev-row .info { min-width: 0; flex: 1; }
+  .dev-row .name { font-size: 15px; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dev-row .sub { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .mojis { font-size: 12px; letter-spacing: 2px; flex: none; }
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .toolbar { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 20px; }
+  .picker { height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: 12.5px; }
+  .picker .m { color: var(--mute); }
+  .toolbar .sp { flex: 1; }
+  .tbtn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; color: var(--mute); display: grid; place-items: center; cursor: pointer; }
+  .tbtn:hover { background: var(--hover); }
+  .tbtn.add { color: var(--accent); }
+  .tbtn.add:hover { background: var(--accent-soft); }
+  .detail { flex: 1; overflow-y: auto; padding: 4px 24px 16px; min-height: 0; }
+  .dhead { display: flex; align-items: flex-start; gap: 14px; padding: 6px 0 16px; }
+  .dhead h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
+  .dhead .sub { font-size: 13px; color: var(--mute); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .stats { display: flex; gap: 10px; margin-bottom: 16px; }
+  .stats .tile { flex: 1; }
+  .curve-head { display: flex; align-items: baseline; }
+  .curve-head .cv { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .curve-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--mute); margin-top: 6px; }
+  .curvewrap { position: relative; }
+  .curvewrap .enddot { position: absolute; right: 0; bottom: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .ring-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .ring-row .t { font-size: 13px; font-weight: 600; }
+  .ring-row .pc { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .eta { font-size: 12px; color: var(--mute); margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .ms-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
+  .ms-row.off { opacity: .3; }
+  .ms-row .ck { margin-left: auto; color: var(--earn); font-weight: 700; }
+  .stop { stop-color: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="window" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">Payback — 我的设备</div>
+      <div class="sp"></div>
+      <button class="theme-btn" id="t" title="切换亮暗主题">◐</button>
+    </div>
+    <div class="body">
+      <aside class="sidebar">
+        <div class="summary">
+          <div class="tiles">
+            <div class="tile"><div class="lbl">累计投入</div><div class="val">¥25,787</div></div>
+            <div class="tile hero"><div class="lbl">已赚回</div><div class="val">+¥1,007</div></div>
+            <div class="tile"><div class="lbl">整体日均</div><div class="val">¥16.57/天</div></div>
+            <div class="tile"><div class="lbl">设备</div><div class="val">6</div></div>
+          </div>
+          <div class="quip"><span class="star">✦</span>时间是你最便宜的合伙人。</div>
+        </div>
+        <div class="list">
+          <div class="dev-row selected">
+            <div class="badge s34 cat-computer">💻</div>
+            <div class="info"><div class="name">MacBook Pro 14″</div><div class="sub">¥29.30/天</div></div>
+            <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10.5" fill="none" stroke="var(--track)" stroke-width="3"/><circle cx="13" cy="13" r="10.5" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="44.9 21.1" transform="rotate(-90 13 13)"/><text x="13" y="15.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="var(--ink)">68</text></svg>
+          </div>
+          <div class="dev-row">
+            <div class="badge s34 cat-accessory">⌨️</div>
+            <div class="info"><div class="name">Keychron K2</div><div class="sub">¥1.00/天</div></div>
+            <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10.5" fill="none" stroke="var(--track)" stroke-width="3"/><circle cx="13" cy="13" r="10.5" fill="none" stroke="var(--earn)" stroke-width="3" stroke-linecap="round" stroke-dasharray="65.9 0" transform="rotate(-90 13 13)"/><text x="13" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="var(--earn)">✓</text></svg>
+          </div>
+          <div class="dev-row">
+            <div class="badge s34 cat-tablet">📚</div>
+            <div class="info"><div class="name">Kindle Paperwhite</div><div class="sub">¥0.48/天</div></div>
+            <div class="mojis">🪶✨</div>
+          </div>
+          <div class="dev-row">
+            <div class="badge s34 cat-audio">🎧</div>
+            <div class="info"><div class="name">AirPods Pro 2</div><div class="sub">¥4.23/天</div></div>
+            <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10.5" fill="none" stroke="var(--track)" stroke-width="3"/><circle cx="13" cy="13" r="10.5" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="62.0 4.0" transform="rotate(-90 13 13)"/><text x="13" y="15.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="var(--ink)">94</text></svg>
+          </div>
+          <div class="dev-row">
+            <div class="badge s34 cat-phone">📱</div>
+            <div class="info"><div class="name">iPhone 17</div><div class="sub">¥58.24/天</div></div>
+            <div class="mojis">🌱</div>
+          </div>
+          <div class="dev-row">
+            <div class="badge s34 cat-appliance">☕</div>
+            <div class="info"><div class="name">德龙咖啡机</div><div class="sub">¥6.19/天</div></div>
+            <div class="mojis">🌱💸</div>
+          </div>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="toolbar">
+          <div class="picker"><span class="m">排序</span>加入时间 ▾</div>
+          <div class="sp"></div>
+          <button class="tbtn" title="编辑"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+          <button class="tbtn" title="删除"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>
+          <button class="tbtn add" title="添加设备"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 7.5v9M7.5 12h9" stroke="var(--paper)" stroke-width="2" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="detail">
+          <div class="dhead">
+            <div class="badge s54 cat-computer">💻</div>
+            <div>
+              <h1>MacBook Pro 14″</h1>
+              <div class="sub">¥14,999.00 · 2025-06-18</div>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="tile"><div class="lbl">每日成本</div><div class="val">¥29.30<span style="font-size:12px;color:var(--mute)">/天</span></div></div>
+            <div class="tile"><div class="lbl">已持有</div><div class="val">512 天</div></div>
+            <div class="tile"><div class="lbl">每天愿意付</div><div class="val">¥20.00</div></div>
+          </div>
+          <div class="card">
+            <div class="curve-head"><span class="ctitle" style="margin:0">每日成本</span><span class="cv">¥29.30/天</span></div>
+            <div class="curvewrap">
+              <svg width="100%" height="64" viewBox="0 0 660 64" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="0"><stop class="stop" offset="0" stop-opacity=".45"/><stop class="stop" offset="1"/></linearGradient>
+                  <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop class="stop" offset="0" stop-opacity=".22"/><stop class="stop" offset="1" stop-opacity=".02"/></linearGradient>
+                </defs>
+                <path d="M0,2 C90,7 180,16 280,28 C380,40 520,54 658,60 L658,64 L0,64 Z" fill="url(#fill)"/>
+                <path d="M0,2 C90,7 180,16 280,28 C380,40 520,54 658,60" fill="none" stroke="url(#stroke)" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+              <i class="enddot"></i>
+            </div>
+            <div class="curve-foot"><span>第 1 天</span><span>第 512 天</span></div>
+          </div>
+          <div class="card">
+            <div class="ring-row">
+              <svg width="38" height="38" viewBox="0 0 38 38"><circle cx="19" cy="19" r="16.5" fill="none" stroke="var(--track)" stroke-width="5"/><circle cx="19" cy="19" r="16.5" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-dasharray="70.5 33.2" transform="rotate(-90 19 19)"/><text x="19" y="22.5" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--ink)">68</text></svg>
+              <span class="t">回本进度</span>
+              <span class="pc">68%</span>
+            </div>
+            <div class="bar"><i style="width:68%"></i></div>
+            <div class="eta">预计回本：2027-07-08 · 还差 ¥4,759</div>
+          </div>
+          <div class="card">
+            <div class="ctitle">里程碑</div>
+            <div class="ms-row">🌱 百日纪念<span class="ck">✓</span></div>
+            <div class="ms-row">📅 陪伴一整年<span class="ck">✓</span></div>
+            <div class="ms-row off">🏆 一千天老友</div>
+            <div class="ms-row off">💸 日均低于 10 元</div>
+            <div class="ms-row off">🌤 日均低于 5 元</div>
+            <div class="ms-row off">🍃 日均低于 2 元</div>
+            <div class="ms-row off">🪶 日均低于 1 元</div>
+            <div class="ms-row off">✨ 日均低于 5 毛</div>
+            <div class="ms-row off">🎉 完全回本</div>
+          </div>
+        </div>
+        <div class="statusbar">
+          <span><span class="dot"></span>Racket CS 就绪</span>
+          <span>v1.12.0</span>
+          <span>同步已开启</span>
+          <span class="sp"></span>
+          <span>原型 v0.1 · 按 ◐ 切换亮暗</span>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    document.getElementById('t').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

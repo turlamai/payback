@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Payback — 空库状态（+ 后端启动态）</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== empty 页面专属：空库居中态 ==== */
+  .window.w2 { width: 920px; height: 560px; }
+  .center { flex: 1; display: grid; place-items: center; }
+  .empty { display: grid; justify-items: center; gap: 14px; text-align: center; }
+  .empty .orb { width: 96px; height: 96px; border-radius: 50%; background: var(--accent-soft); display: grid; place-items: center; font-size: 44px; }
+  .empty h1 { font-size: 20px; font-weight: 700; }
+  .empty p { font-size: 13px; color: var(--mute); max-width: 380px; line-height: 1.6; }
+  .statusline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mute); }
+  .pending { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); border-top-color: transparent; display: inline-block; flex: none; }
+  .ok-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--earn); }
+</style>
+</head>
+<body>
+  <div class="window w2" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">Payback — 我的设备</div>
+      <div class="sp"></div>
+      <button class="theme-btn" id="t" title="切换亮暗主题">◐</button>
+    </div>
+    <div class="center">
+      <div class="empty">
+        <div class="orb">💰</div>
+        <h1>还没有设备</h1>
+        <p>添加你的第一台设备，看着它的每日成本一天天降下去。</p>
+        <button class="btn primary" style="height:34px; padding:0 16px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 9V6h-2v5H6v2h5v5h2v-5h5v-2z"/></svg>
+          添加设备
+        </button>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span>v1.12.0</span>
+      <span class="sp"></span>
+      <span>原型 v0.1 · 按 ◐ 切换亮暗</span>
+    </div>
+  </div>
+  <div class="strip">
+    <div class="panel">
+      <div class="plabel">状态变体：后端启动中（非模态，永不静默）</div>
+      <div class="statusline"><span class="pending"></span>正在启动 Racket 引擎…</div>
+      <div class="hint" style="margin-top:8px">启动 / 重载是全窗口居中的单状态行：spinner + 文案，无进度条不装忙；后端就绪后直接进入空态或列表。</div>
+    </div>
+    <div class="panel">
+      <div class="plabel">状态变体：后端就绪（进入空态前的最终状态行）</div>
+      <div class="statusline"><span class="ok-dot"></span>Racket CS 就绪</div>
+      <div class="hint" style="margin-top:8px">空态本身只用 accent-soft 一个弱底托起 💰；主按钮是页面上唯一的 accent 实底——新用户的第一眼只有一个出口：添加设备。</div>
+    </div>
+  </div>
+  <script>
+    document.getElementById('t').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

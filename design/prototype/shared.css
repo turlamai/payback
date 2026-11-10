@@ -1,0 +1,142 @@
+/* ==== Payback 原型共享壳层 — tokens 与基础组件，见 design/DESIGN.md ====
+   Tokens 提取自 docs/design.md 与三端实现单源：
+   PaybackTheme.swift / windows App.xaml ThemeDictionaries / linux apply_css。
+   主题切换：body.dark（原型演示用），实现端跟随系统亮暗。 */
+:root {
+  --paper: #FAF7F2; --card: #FFFFFF; --hover: #F3EEE6; --line: #E8E2D9;
+  --ink: #3A3630; --mute: #7D7A74;
+  --accent: #C15F3C; --accent-hover: #B05536; --accent-down: #9E4B30;
+  --accent-soft: rgba(193,95,60,.14);
+  --earn: #38964D; --earn-soft: rgba(56,150,77,.14);
+  --warning: #B25E09;
+  --track: rgba(60,60,67,.15);
+  --danger: #C0392B;
+  --shadow-card: 0 1px 2px rgba(31,29,26,.04), 0 4px 12px rgba(31,29,26,.06);
+}
+.dark {
+  --paper: #1F1D1A; --card: #2B2926; --hover: #34322E; --line: #3A3835;
+  --ink: #E8E4DD; --mute: #A29E99;
+  --accent: #D98A66; --accent-hover: #E29A78; --accent-down: #C97B5B;
+  --accent-soft: rgba(217,138,102,.14);
+  --earn: #57B26B; --earn-soft: rgba(87,178,107,.14);
+  --warning: #E8A33D;
+  --track: rgba(235,235,245,.15);
+  --danger: #E5645A;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.20), 0 4px 12px rgba(0,0,0,.24);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh; display: grid; place-items: center; align-content: center; padding: 40px 24px;
+  background: radial-gradient(1200px 800px at 20% 0%, #f6f1e8, #ece5d8 60%, #e0d7c6);
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased; color: var(--ink);
+}
+body.dark {
+  background: radial-gradient(1200px 800px at 20% 0%, #2a2620, #211d18 60%, #191612);
+}
+.window {
+  position: relative; width: 1200px; max-width: 100%; height: 760px; border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; background: var(--paper); color: var(--ink);
+  box-shadow: 0 1px 2px rgba(31,29,26,.10), 0 12px 32px rgba(31,29,26,.18), 0 32px 80px rgba(31,29,26,.22);
+  transition: background .12s ease, color .12s ease;
+}
+.titlebar {
+  height: 44px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.lights { display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; }
+.lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.titlebar .t { font-size: 13px; font-weight: 600; color: var(--mute); }
+.titlebar .sp { flex: 1; }
+.theme-btn {
+  width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--line); background: var(--card);
+  color: var(--mute); display: grid; place-items: center; cursor: pointer; font-size: 13px;
+}
+/* ---- 数字与键盘 ---- */
+.num { font-variant-numeric: tabular-nums; }
+kbd {
+  font-family: inherit; font-size: 10.5px; color: var(--mute);
+  background: var(--hover); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+}
+/* ---- 按钮：主操作永远品牌橙，不用平台 suggested 色 ---- */
+.btn {
+  height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  cursor: default; user-select: none;
+}
+.btn.small { height: 26px; padding: 0 10px; font-size: 12px; }
+.btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.primary:active { background: var(--accent-down); }
+body.dark .btn.primary { color: #1F1D1A; }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--mute); }
+.btn.danger { border-color: transparent; background: transparent; color: var(--danger); font-weight: 600; }
+/* ---- 卡片与统计 tile ---- */
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px;
+  box-shadow: var(--shadow-card); margin-bottom: 16px;
+}
+.card .ctitle { font-size: 12px; font-weight: 600; color: var(--mute); margin-bottom: 8px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow-card); }
+.tile .lbl { font-size: 11px; font-weight: 500; color: var(--mute); }
+.tile .val { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap; }
+.tile.hero { background: var(--earn-soft); border-color: transparent; }
+.tile.hero .val { color: var(--earn); }
+/* ---- 图标徽章（emoji + 分类 tint） ---- */
+.badge { display: grid; place-items: center; flex: none; }
+.badge.s34 { width: 34px; height: 34px; border-radius: 9px; font-size: 18px; }
+.badge.s54 { width: 54px; height: 54px; border-radius: 14px; font-size: 28px; }
+.cat-computer  { background: rgba(0,122,255,.14); }
+.cat-phone     { background: rgba(48,176,199,.14); }
+.cat-tablet    { background: rgba(88,86,214,.14); }
+.cat-watch     { background: rgba(0,199,190,.18); }
+.cat-audio     { background: rgba(175,82,222,.14); }
+.cat-camera    { background: rgba(255,149,0,.16); }
+.cat-gaming    { background: rgba(255,59,48,.13); }
+.cat-appliance { background: rgba(50,173,230,.15); }
+.cat-accessory { background: rgba(0,199,190,.16); }
+.cat-other     { background: var(--accent-soft); }
+body.dark .cat-computer  { background: rgba(0,122,255,.20); }
+body.dark .cat-phone     { background: rgba(48,176,199,.20); }
+body.dark .cat-tablet    { background: rgba(88,86,214,.20); }
+body.dark .cat-watch     { background: rgba(0,199,190,.24); }
+body.dark .cat-audio     { background: rgba(175,82,222,.20); }
+body.dark .cat-camera    { background: rgba(255,149,0,.22); }
+body.dark .cat-gaming    { background: rgba(255,59,48,.19); }
+body.dark .cat-appliance { background: rgba(50,173,230,.21); }
+body.dark .cat-accessory { background: rgba(0,199,190,.22); }
+/* ---- 胶囊（里程碑/已回本） ---- */
+.capsule { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; font-size: 12px; }
+.capsule.earn { background: var(--earn-soft); color: var(--earn); font-weight: 700; }
+.capsule.ms { background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 11.5px; padding: 2px 8px; }
+.capsule.ms.quiet { background: var(--hover); color: var(--mute); }
+/* ---- 进度条 ---- */
+.bar { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+.bar.earn > i { background: var(--earn); }
+/* ---- 表单控件 ---- */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; font-weight: 600; color: var(--mute); }
+.input, select.input {
+  height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--card); color: var(--ink); font-size: 13px; font-family: inherit; outline: none;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.hint { font-size: 11.5px; color: var(--mute); }
+.hint.err { color: var(--danger); }
+.toggle { width: 38px; height: 22px; border-radius: 999px; background: var(--track); position: relative; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--card); box-shadow: 0 1px 2px rgba(31,29,26,.25); transition: left .12s ease; }
+.toggle.on { background: var(--accent); }
+.toggle.on::after { left: 18px; }
+/* ---- 状态条 ---- */
+.statusbar {
+  flex: none; height: 32px; display: flex; align-items: center; gap: 14px; padding: 0 20px;
+  border-top: 1px solid var(--line); font-size: 12px; color: var(--mute);
+}
+.statusbar .sp { flex: 1; }
+.statusbar .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--earn); display: inline-block; margin-right: 6px; }
+/* ---- 窗口外注记（状态变体说明，随主题成对） ---- */
+.strip { width: 1200px; max-width: 100%; margin-top: 18px; display: flex; gap: 12px; }
+.panel { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow-card); }
+.panel .plabel { font-size: 11px; font-weight: 700; letter-spacing: .6px; color: var(--mute); margin-bottom: 8px; }

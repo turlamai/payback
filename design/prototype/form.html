@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Payback — 添加设备表单（模态 sheet：idle 态 + 保存失败态）</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== form 页面专属：模态 sheet 与保存生命周期 ==== */
+  .backdrop { position: absolute; inset: 0; background: rgba(31,29,26,.30); }
+  .ghosts { position: absolute; inset: 0; display: flex; }
+  .ghosts .side { width: 300px; border-right: 1px solid var(--line); padding: 14px; display: grid; gap: 10px; align-content: start; }
+  .ghosts .main { flex: 1; padding: 14px 24px; display: grid; gap: 12px; align-content: start; }
+  .ghosts i { display: block; height: 34px; border-radius: 10px; background: var(--hover); }
+  .ghosts .main i:first-child { height: 54px; width: 54px; border-radius: 14px; }
+  .sheet {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 520px; max-width: calc(100% - 48px); max-height: calc(100% - 60px); overflow-y: auto;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: 0 24px 64px rgba(31,29,26,.35); padding: 18px 20px 16px;
+  }
+  .sheet h2 { font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+  .sect { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 12px 14px; margin-bottom: 12px; display: grid; gap: 10px; }
+  .sect .row { display: flex; align-items: center; gap: 10px; }
+  .sect .row > label { font-size: 13px; font-weight: 600; width: 110px; flex: none; }
+  .sect .row .input { flex: 1; }
+  .emoji-row { display: flex; gap: 6px; flex: 1; }
+  .emoji-row span { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-size: 16px; cursor: default; }
+  .emoji-row span:hover { background: var(--hover); }
+  .emoji-row span.on { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent); }
+  .money { position: relative; flex: 1; }
+  .money .input { width: 100%; }
+  .money .cur { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--mute); }
+  .money .input { padding-left: 26px; font-variant-numeric: tabular-nums; }
+  .linkbtn { background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+  .linkbtn:hover { background: var(--accent-soft); }
+  .willing-sub { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; padding-left: 0; }
+  .foot { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .foot .keys { display: flex; gap: 10px; font-size: 11.5px; color: var(--mute); align-items: center; }
+  .foot .sp { flex: 1; }
+  .banner { display: flex; align-items: flex-start; gap: 8px; background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; color: var(--ink); }
+  .banner b { color: var(--danger); }
+  /* 窗口外注记：保存生命周期三态 */
+  .lc { display: grid; gap: 8px; }
+  .lc .st { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+  .lc .st .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--hover); color: var(--mute); flex: none; }
+  .lc .st .tag.run { background: var(--accent-soft); color: var(--accent); }
+  .lc .st .tag.fail { background: var(--accent-soft); color: var(--danger); }
+  .lc .st .tag.ok { background: var(--earn-soft); color: var(--earn); }
+</style>
+</head>
+<body>
+  <div class="window" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">Payback — 我的设备</div>
+      <div class="sp"></div>
+      <button class="theme-btn" id="t" title="切换亮暗主题">◐</button>
+    </div>
+    <div style="position:relative; flex:1; display:flex; min-height:0">
+      <div class="ghosts" aria-hidden="true">
+        <div class="side"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="main"><i></i><i style="height:120px"></i><i style="height:90px"></i></div>
+      </div>
+      <div class="backdrop"></div>
+      <div class="sheet" role="dialog" aria-label="添加设备">
+        <h2>添加设备</h2>
+        <div class="sect">
+          <div class="row"><label for="f-name">名称</label><input id="f-name" class="input" value="Keychron K3"></div>
+          <div class="row"><label>图标</label>
+            <div class="emoji-row"><span>💻</span><span>📱</span><span>🎧</span><span class="on">⌨️</span><span>📷</span><span>🎮</span><span>☕</span><span>✨</span></div>
+          </div>
+          <div class="row"><label for="f-cat">分类</label>
+            <select id="f-cat" class="input"><option>电脑</option><option>手机</option><option>平板</option><option>手表</option><option>音频</option><option>相机</option><option>游戏</option><option>家电</option><option selected>配件</option><option>其他</option></select>
+          </div>
+        </div>
+        <div class="sect">
+          <div class="row"><label for="f-price">购买价格</label>
+            <div class="money"><span class="cur">¥</span><input id="f-price" class="input" value="699.00" inputmode="decimal"></div>
+          </div>
+          <div class="row"><label for="f-date">购买日期</label>
+            <input id="f-date" class="input" value="2026-11-05">
+            <button class="linkbtn">回到今天</button>
+          </div>
+          <div class="hint">按 年-月-日 填写，例如 2026-10-15 · 弹出日历可直接选年 / 月</div>
+        </div>
+        <div class="sect">
+          <div class="row">
+            <label>心理价位（每天）</label>
+            <div class="input" style="border:none; background:transparent; display:flex; flex:1; justify-content:flex-end">
+              <div class="toggle on" role="switch" aria-checked="true"></div>
+            </div>
+          </div>
+          <div class="willing-sub">
+            <div class="money"><span class="cur">¥</span><input class="input" value="1.50" inputmode="decimal"></div>
+            <div class="hint">设置“每天愿意付多少钱”，就能看到回本进度。</div>
+          </div>
+        </div>
+        <div class="sect">
+          <div class="row"><label for="f-notes">备注</label><input id="f-notes" class="input" value="办公键盘，红轴"></div>
+        </div>
+        <div class="foot">
+          <div class="keys"><span><kbd>Tab</kbd> 切换字段</span><span><kbd>↵</kbd> 保存</span><span><kbd>Esc</kbd> 取消</span></div>
+          <div class="sp"></div>
+          <button class="btn">取消</button>
+          <button class="btn primary">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="strip">
+    <div class="panel">
+      <div class="plabel">保存生命周期（docs/save-lifecycle.md，跨端一致）</div>
+      <div class="lc">
+        <div class="st"><span class="tag run">saving</span>保存中…：Save 与 Cancel 同时禁用，sheet 不可关闭（Esc 与拖拽关闭都被拦截）</div>
+        <div class="st"><span class="tag fail">failed</span>失败：sheet 保持打开，字段原样保留，表单内出现「保存失败」banner，Save 变 Retry</div>
+        <div class="st"><span class="tag ok">saved</span>成功：恰好关闭一次，列表出现新记录，详情窗格自动选中新设备</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="plabel">失败态示例（后端拒绝：价格超上限）</div>
+      <div class="banner"><span>⚠</span><span><b>保存失败</b> — 请输入大于 0 且不超过 10,000,000.00 的金额（后端校验信息原样展示）</span></div>
+      <div class="row" style="display:flex; gap:8px; margin-bottom:8px">
+        <div class="money" style="flex:1"><span class="cur">¥</span><input class="input" value="999999999.00"></div>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end">
+        <button class="btn">取消</button>
+        <button class="btn primary">重试</button>
+      </div>
+      <div class="hint" style="margin-top:8px">失败后重新录入合法值 → Retry 恰好落一条记录（零残留）；用户只是 Esc 离开则取消，不静默保存。</div>
+    </div>
+  </div>
+  <script>
+    document.getElementById('t').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

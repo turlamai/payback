@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Payback — 设置（数据与同步 + 货币）</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== settings 页面专属：独立设置窗口 ==== */
+  .window.w2 { width: 780px; height: 600px; }
+  .content { flex: 1; overflow-y: auto; padding: 16px 24px 20px; }
+  .sect-h { font-size: 12px; font-weight: 700; letter-spacing: .4px; color: var(--mute); margin: 8px 0 8px; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-card); overflow: hidden; margin-bottom: 16px; }
+  .grp-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-top: 1px solid var(--line); min-height: 46px; }
+  .grp-row:first-child { border-top: none; }
+  .grp-row .lbl { font-size: 13px; font-weight: 600; width: 96px; flex: none; }
+  .grp-row .sub { font-size: 12px; color: var(--mute); }
+  .grp-row .sp { flex: 1; }
+  .status-on { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--earn); font-weight: 600; }
+  .path { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .machines { display: grid; gap: 6px; }
+  .machine { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .machine .ic { color: var(--mute); }
+  .machine .self { color: var(--mute); }
+  .warn { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--warning); padding: 10px 16px; border-top: 1px solid var(--line); }
+  .nameinput { width: 180px; text-align: right; }
+  .sync-note { font-size: 12.5px; color: var(--mute); line-height: 1.55; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--paper); }
+</style>
+</head>
+<body>
+  <div class="window w2" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">Payback — 设置</div>
+      <div class="sp"></div>
+      <button class="theme-btn" id="t" title="切换亮暗主题">◐</button>
+    </div>
+    <div class="content">
+      <div class="sect-h">数据与同步</div>
+      <div class="group">
+        <div class="sync-note">把数据放进任意网盘文件夹（iCloud Drive、OneDrive、坚果云、Syncthing…），任一台设备录入，处处可见。零服务器：每台机器只写自己的分片，删除用墓碑，记录级合并。</div>
+        <div class="grp-row">
+          <div class="status-on"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>同步已开启</div>
+          <div class="sp"></div>
+          <button class="btn small danger">停止同步</button>
+        </div>
+        <div class="grp-row">
+          <div class="lbl">同步文件夹</div>
+          <div style="min-width:0; flex:1">
+            <div class="path">/Users/jiren/Sync/Payback</div>
+            <div class="sub">BYO 文件夹，零服务器 · 数据分片随网盘走</div>
+          </div>
+          <button class="btn small">打开文件夹</button>
+        </div>
+        <div class="grp-row">
+          <div class="lbl">本机名称</div>
+          <input class="input nameinput" value="Studio Mac">
+          <button class="btn small">保存</button>
+        </div>
+        <div class="grp-row" style="display:block">
+          <div style="display:flex; align-items:baseline; margin-bottom:8px">
+            <div class="sub" style="font-size:12px; font-weight:600">参与同步的机器</div>
+            <div class="sp" style="flex:1"></div>
+            <div class="sub" style="font-size:11.5px">上次合并：今天 08:12</div>
+          </div>
+          <div class="machines">
+            <div class="machine"><span class="ic">💻＋📱</span>Studio Mac<span class="self">（本机）</span></div>
+            <div class="machine"><span class="ic">💻</span>睡房笔记本</div>
+            <div class="machine"><span class="ic">💻</span>公司台式机</div>
+          </div>
+        </div>
+        <div class="warn"><span>⚠</span><span>2 个文件无法读取，已跳过（常见于网盘冲突副本）。</span></div>
+      </div>
+      <div class="sect-h">货币</div>
+      <div class="group">
+        <div class="grp-row">
+          <div class="lbl">货币</div>
+          <select class="input" style="width:200px"><option selected>CNY — 人民币</option><option>USD — 美元</option><option>EUR — 欧元</option><option>JPY — 日元</option><option>GBP — 英镑</option><option>HKD — 港元</option><option>TWD — 新台币</option><option>KRW — 韩元</option><option>SGD — 新加坡元</option><option>AUD — 澳元</option><option>CAD — 加元</option><option>CHF — 瑞郎</option></select>
+          <div class="sp"></div>
+          <div class="sub">新设备的默认货币</div>
+        </div>
+        <div class="grp-row">
+          <div class="lbl">语言</div>
+          <select class="input" style="width:200px"><option selected>跟随系统</option><option>简体中文</option><option>English</option></select>
+          <div class="sp"></div>
+          <div class="sub">zh / en 双源文案（strings.json）</div>
+        </div>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span><span class="dot"></span>Racket CS 就绪</span>
+      <span>v1.12.0</span>
+      <span class="sp"></span>
+      <span>原型 v0.1 · 按 ◐ 切换亮暗</span>
+    </div>
+  </div>
+  <script>
+    document.getElementById('t').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>
