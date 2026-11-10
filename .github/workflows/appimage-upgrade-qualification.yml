@@ -1,0 +1,332 @@
+name: Published upgrade qualification (N -> N+1)
+
+# Real-feed upgrade qualification (owner mandate #14 evidence ladder):
+# install the previous *published* release, drive the updater entry points
+# that release shipped against the real signed feed
+# (releases/latest/download/update-manifest.json), extract the downloaded
+# N+1 tarball over the app directory (the documented tarball install path),
+# relaunch both versions headlessly on the same data directory, execute the
+# documented rollback, and refuse a one-byte-tampered live feed. Green
+# offline tests never prove an upgrade; the evidence artifact this workflow
+# uploads does.
+#
+# Install shape: payback's feed is tar.gz-only by design (docs/UPDATE.md) —
+# AppImage/deb/rpm are installer assets that upgrade outside the app — so
+# this workflow qualifies the in-app update path and records `installShape`
+# in the evidence; the file name keeps the family workflow name.
+#
+# Updater note: the workflow checks out the N tag but overlays
+# app/updater.rkt and the driver from main before driving it. The N tags
+# currently published (<= 1.12.0) shipped a nine-argument updater-config
+# call against rivet #271's ten-field struct, so their real check path
+# errors before any network work (masked as a generic error state by the
+# check's own handler); the fix landed in main and the overlay is exactly
+# what the next release will run. Once a release ships the fix the overlay
+# becomes a no-op. The evidence records the overlay commit as
+# `updaterSource`.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    name: ${{ matrix.arch }} published upgrade (tar.gz in-app path)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+            racket-arch: x64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            racket-arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - name: Find the two newest published releases
+        id: releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tags="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=30" \
+            --jq '[.[] | select(.draft == false and .prerelease == false)][0:2] | .[].tag_name')"
+          test "$(echo "$tags" | wc -l)" -eq 2 || { echo "need two published releases" >&2; exit 1; }
+          to_tag="$(echo "$tags" | sed -n 1p)"
+          from_tag="$(echo "$tags" | sed -n 2p)"
+          echo "from-tag=$from_tag" >> "$GITHUB_OUTPUT"
+          echo "to-tag=$to_tag" >> "$GITHUB_OUTPUT"
+          echo "from-version=${from_tag#v}" >> "$GITHUB_OUTPUT"
+          echo "to-version=${to_tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the updater under test (N)
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.releases.outputs.from-tag }}
+
+      - name: Overlay the corrected updater and the driver from main
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth 1
+          git checkout FETCH_HEAD -- app/updater.rkt scripts/acceptance/upgrade-qualification.rkt
+          echo "OVERLAY_SHA=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
+
+      - name: Read the rivet pin the N release was built against
+        run: |
+          set -euo pipefail
+          pin="$(grep -m1 -E '^ *RIVET_PIN:' .github/workflows/ci.yml | sed -E 's/.*RIVET_PIN:[[:space:]]*//')"
+          test -n "$pin"
+          echo "RIVET_PIN=$pin" >> "$GITHUB_ENV"
+
+      - name: Install headless GUI runtime + accessibility tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -o Acquire::Retries=5 --no-install-recommends \
+            libgtk-4-1 libjson-glib-1.0-0 libsecret-1-0 liblz4-1 \
+            zlib1g libncurses6 libx11-6 libxtst6 \
+            weston at-spi2-core dbus python3-pyatspi libglib2.0-bin
+
+      - uses: Bogdanp/setup-racket@v1.16
+        with:
+          version: '9.3'
+          architecture: ${{ matrix.racket-arch }}
+          distribution: full
+          variant: CS
+
+      - name: Install the rivet release N was built against
+        run: raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#${RIVET_PIN}"
+
+      - name: Fetch published N, N+1 and the live signed feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          FROM_VERSION="${{ steps.releases.outputs.from-version }}"
+          TO_VERSION="${{ steps.releases.outputs.to-version }}"
+          FROM_ASSET="payback-${FROM_VERSION}-linux-${{ matrix.arch }}.tar.gz"
+          TO_ASSET="payback-${TO_VERSION}-linux-${{ matrix.arch }}.tar.gz"
+          mkdir -p /tmp/qual/from /tmp/qual/to
+          gh release download "${{ steps.releases.outputs.from-tag }}" -p "$FROM_ASSET" -D /tmp/qual/from
+          gh release download "${{ steps.releases.outputs.to-tag }}" \
+            -p "$TO_ASSET" -p "$TO_ASSET.sha256" -D /tmp/qual/to
+          FROM_TAR="/tmp/qual/from/$FROM_ASSET"
+          TO_TAR="/tmp/qual/to/$TO_ASSET"
+          test -s "$FROM_TAR" && test -s "$TO_TAR"
+          # the published sidecar must agree with the downloaded N+1 bytes
+          ( cd /tmp/qual/to && sha256sum --check "$TO_ASSET.sha256" )
+          # the live feed we exercise is the moving latest, and it must offer N+1
+          LIVE_FEED_URL="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/update-manifest.json"
+          curl -fsSL -o /tmp/qual/update-manifest.json "$LIVE_FEED_URL"
+          FEED_VERSION="$(jq -r .payload /tmp/qual/update-manifest.json | base64 -d | jq -r .version)"
+          test "$FEED_VERSION" = "$TO_VERSION"
+          echo "FROM_TAR=$FROM_TAR" >> "$GITHUB_ENV"
+          echo "TO_TAR=$TO_TAR" >> "$GITHUB_ENV"
+          echo "LIVE_FEED_URL=$LIVE_FEED_URL" >> "$GITHUB_ENV"
+          echo "FROM_SHA=$(sha256sum "$FROM_TAR" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "TO_SHA=$(sha256sum "$TO_TAR" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "FEED_KEY_ID=$(jq -r '.signature.key_id' /tmp/qual/update-manifest.json)" >> "$GITHUB_ENV"
+
+      - name: Write the headless boot verifier
+        run: |
+          cat > /tmp/qual/boot-verify.sh <<'EOF'
+          #!/usr/bin/env bash
+          # Boot a packaged payback tree headlessly (weston + at-spi, the
+          # scripts/e2e/e2e-linux.sh pattern) and assert the "Payback" frame
+          # maps and the seeded device is visible in the a11y tree — the
+          # same proof every push makes on the packaged app.
+          set -euo pipefail
+          app_dir="$1"; out="$2"; repo="$3"
+          exe="$app_dir/RivetHost"
+          test -x "$exe"
+          mkdir -p "$out"
+          export HOME=/tmp/qual/home
+          export XDG_DATA_HOME=/tmp/qual/data-home
+          export XDG_CONFIG_HOME=/tmp/qual/config
+          export XDG_CACHE_HOME=/tmp/qual/cache
+          export XDG_RUNTIME_DIR=/tmp/qual/runtime
+          export WAYLAND_DISPLAY=wayland-payback GDK_BACKEND=wayland GTK_A11Y=atspi NO_AT_BRIDGE=0 LANG=C.UTF-8
+          unset DISPLAY
+          mkdir -p "$HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          rm -f "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 --log="$out/weston.log" &
+          weston_pid=$!
+          for _ in $(seq 1 100); do
+            [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] && break
+            sleep 0.05
+          done
+          [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]]
+          launcher="$(command -v at-spi-bus-launcher || true)"
+          [[ -n "$launcher" ]] || launcher=/usr/libexec/at-spi-bus-launcher
+          "$launcher" --launch-immediately >"$out/at-spi.log" 2>&1 &
+          atspi_pid=$!
+          for _ in $(seq 1 100); do
+            gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus --method org.a11y.Bus.GetAddress >/dev/null 2>&1 && break
+            sleep 0.05
+          done
+          export AT_SPI_BUS_ADDRESS="$(gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus --method org.a11y.Bus.GetAddress | sed -E "s/^\('([^']+)',\)$/\1/")"
+          "$exe" >"$out/application.log" 2>&1 &
+          app_pid=$!
+          stop_bounded() {
+            local pid="$1"
+            kill -TERM "$pid" 2>/dev/null || true
+            for _ in $(seq 1 200); do
+              kill -0 "$pid" 2>/dev/null || return 0
+              sleep 0.05
+            done
+            kill -KILL "$pid" 2>/dev/null || true
+            return 0
+          }
+          status=0
+          python3 "$repo/scripts/e2e/linux-atspi.py" --output "$out" || status=$?
+          stop_bounded "$app_pid"
+          kill -TERM "$atspi_pid" 2>/dev/null || true
+          stop_bounded "$weston_pid"
+          exit "$status"
+          EOF
+          chmod +x /tmp/qual/boot-verify.sh
+
+      - name: Install N (tarball extract) and seed the device record
+        run: |
+          set -euo pipefail
+          APPDIR="payback-linux-${{ matrix.arch }}"
+          mkdir -p /tmp/qual/install /tmp/qual/data-home/payback
+          tar -xzf "$FROM_TAR" -C /tmp/qual/install
+          test -x "/tmp/qual/install/$APPDIR/RivetHost"
+          # retain N beside the install for the executed rollback
+          cp -a "/tmp/qual/install/$APPDIR" "/tmp/qual/install/$APPDIR.previous"
+          # the v1 device record scripts/e2e/e2e-linux.sh seeds
+          printf '%s\n' '{"version":1,"devices":[{"id":"acceptance-device","name":"Codex Acceptance Device","icon":"box","category":"computer","priceMinor":1299900,"currency":"CNY","purchaseDate":"2024-06-01","willingPerDayMinor":3000,"notes":"","createdAt":"2026-01-01 00:00:00","updatedAt":"2026-01-01 00:00:00"}],"settings":{"currency":"CNY","updateAutoCheck":false,"updateBaseUrl":null,"lastUpdateCheckAt":null,"rolloutBucket":null,"seenMilestones":{"acceptance-device":["days-100","days-365","paid-back"]}}}' \
+            > /tmp/qual/data-home/payback/payback.json
+
+      - name: Boot N headlessly (the install works, the data migrates)
+        run: |
+          set -euo pipefail
+          APPDIR="payback-linux-${{ matrix.arch }}"
+          dbus-run-session -- bash /tmp/qual/boot-verify.sh \
+            "/tmp/qual/install/$APPDIR" /tmp/qual/boot-n "$GITHUB_WORKSPACE"
+          touch /tmp/qual/boot-n.ok
+
+      - name: Refuse a one-byte-tampered live feed (bad signature)
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/qual/tamper
+          python3 - <<'PY'
+          import base64, json
+          raw = open('/tmp/qual/update-manifest.json', 'rb').read()
+          env = json.loads(raw)
+          payload = bytearray(base64.b64decode(env['payload']))
+          i = payload.index(b'"version"')
+          payload[i + 1] ^= 0x01  # "version" -> "wersion": valid JSON, dead signature
+          env['payload'] = base64.b64encode(bytes(payload)).decode()
+          open('/tmp/qual/tamper/update-manifest.json', 'w').write(json.dumps(env))
+          PY
+          DATA_DIR=/tmp/qual/data-home/payback \
+          PRISTINE_BYTES_PATH=/tmp/qual/update-manifest.json \
+          TAMPER_BYTES_PATH=/tmp/qual/tamper/update-manifest.json \
+          OUTPUT_JSON=/tmp/qual/bad-signature.json \
+          racket scripts/acceptance/upgrade-qualification.rkt
+          # a refused manifest must never reach disk as an artifact
+          test -z "$(ls -A /tmp/qual/data-home/payback/updates 2>/dev/null || true)"
+          touch /tmp/qual/bad-signature.ok
+
+      - name: Drive the shipped updater through the live feed
+        run: |
+          set -euo pipefail
+          DATA_DIR=/tmp/qual/data-home/payback \
+          EXPECTED_VERSION="${{ steps.releases.outputs.to-version }}" \
+          OUTPUT_JSON=/tmp/qual/upgrade.json \
+          racket scripts/acceptance/upgrade-qualification.rkt
+          # the updater already hash-checked against the signed manifest;
+          # the bytes must also equal the independently published release asset
+          test "$(jq -r .downloadedSha256 /tmp/qual/upgrade.json)" = "$TO_SHA"
+          touch /tmp/qual/upgrade.ok
+
+      - name: Install N+1 over the app directory and verify the tree
+        run: |
+          set -euo pipefail
+          APPDIR="payback-linux-${{ matrix.arch }}"
+          mkdir -p /tmp/qual/reference /tmp/qual/from-reference
+          tar -xzf "$TO_TAR" -C /tmp/qual/reference
+          tar -xzf "$FROM_TAR" -C /tmp/qual/from-reference
+          tar -xzf "$(jq -r .downloadedPath /tmp/qual/upgrade.json)" -C /tmp/qual/install
+          # the replaced tree must equal the published N+1 tree (no stale files)
+          diff -r --brief "/tmp/qual/install/$APPDIR" "/tmp/qual/reference/$APPDIR"
+          # the retained tree must still be N byte for byte
+          diff -r --brief "/tmp/qual/install/$APPDIR.previous" "/tmp/qual/from-reference/$APPDIR"
+
+      - name: Boot N+1 headlessly (data must survive the upgrade)
+        run: |
+          set -euo pipefail
+          APPDIR="payback-linux-${{ matrix.arch }}"
+          dbus-run-session -- bash /tmp/qual/boot-verify.sh \
+            "/tmp/qual/install/$APPDIR" /tmp/qual/boot-n1 "$GITHUB_WORKSPACE"
+          touch /tmp/qual/boot-n1.ok
+
+      - name: Execute the documented rollback and boot N again
+        run: |
+          set -euo pipefail
+          APPDIR="payback-linux-${{ matrix.arch }}"
+          rm -rf "/tmp/qual/install/$APPDIR"
+          cp -a "/tmp/qual/install/$APPDIR.previous" "/tmp/qual/install/$APPDIR"
+          diff -r --brief "/tmp/qual/install/$APPDIR" "/tmp/qual/from-reference/$APPDIR"
+          dbus-run-session -- bash /tmp/qual/boot-verify.sh \
+            "/tmp/qual/install/$APPDIR" /tmp/qual/boot-rollback "$GITHUB_WORKSPACE"
+          touch /tmp/qual/rollback.ok
+
+      - name: Write evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p .rivet/qualification
+          jq -n \
+            --arg arch "${{ matrix.arch }}" \
+            --arg fromTag "${{ steps.releases.outputs.from-tag }}" \
+            --arg toTag "${{ steps.releases.outputs.to-tag }}" \
+            --arg fromVersion "${{ steps.releases.outputs.from-version }}" \
+            --arg toVersion "${{ steps.releases.outputs.to-version }}" \
+            --arg fromSha256 "${FROM_SHA:-unknown}" \
+            --arg toSha256 "${TO_SHA:-unknown}" \
+            --arg feedUrl "${LIVE_FEED_URL:-unknown}" \
+            --arg manifestKeyId "${FEED_KEY_ID:-unknown}" \
+            --arg updaterSource "${OVERLAY_SHA:-unknown}" \
+            --arg runUrl "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --argjson bootN "$([[ -f /tmp/qual/boot-n.ok ]] && echo true || echo false)" \
+            --argjson badSignature "$([[ -f /tmp/qual/bad-signature.ok ]] && echo true || echo false)" \
+            --argjson upgradeDone "$([[ -f /tmp/qual/upgrade.ok ]] && echo true || echo false)" \
+            --argjson bootNplus1 "$([[ -f /tmp/qual/boot-n1.ok ]] && echo true || echo false)" \
+            --argjson rollback "$([[ -f /tmp/qual/rollback.ok ]] && echo true || echo false)" \
+            --argjson upgrade "$(cat /tmp/qual/upgrade.json 2>/dev/null || echo null)" \
+            --argjson badSignature "$(cat /tmp/qual/bad-signature.json 2>/dev/null || echo null)" \
+            '{
+              format: "payback-published-upgrade-qualification",
+              formatVersion: 1,
+              arch: $arch,
+              installShape: "tar.gz extracted over the app directory (feed entry linux/targz; AppImage, deb and rpm are installer assets outside the feed)",
+              throttleBypass: "direct updater entry points; the 4h auto-check throttle lives in the check-updates RPC and is never consulted",
+              updaterSource: $updaterSource,
+              feedUrl: $feedUrl,
+              manifestKeyId: $manifestKeyId,
+              from: {tag: $fromTag, version: $fromVersion, sha256: $fromSha256},
+              to: {tag: $toTag, version: $toVersion, sha256: $toSha256},
+              bootN: $bootN,
+              badSignature: $badSignature,
+              upgrade: $upgrade,
+              upgradeDone: $upgradeDone,
+              bootNplus1: $bootNplus1,
+              rollback: $rollback,
+              badSignatureDetail: $badSignature,
+              runUrl: $runUrl
+            }' > .rivet/qualification/evidence.json
+          cat .rivet/qualification/evidence.json
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: published-upgrade-${{ matrix.arch }}
+          path: .rivet/qualification/evidence.json
+          if-no-files-found: warn
