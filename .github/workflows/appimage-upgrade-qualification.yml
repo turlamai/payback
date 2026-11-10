@@ -330,3 +330,5 @@ jobs:
           name: published-upgrade-${{ matrix.arch }}
           path: .rivet/qualification/evidence.json
           if-no-files-found: warn
+
+# re-indexed after the 2026-11-10 Actions partial outage dropped the original file-add event
