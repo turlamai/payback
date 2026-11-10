@@ -18,9 +18,9 @@ Download from [Releases](https://github.com/turlamai/payback/releases/latest):
 
 | Platform | Download | Updates |
 |---|---|---|
-| macOS 14+ (Apple silicon) | `payback-<version>-macos-arm64.dmg` — drag to Applications (`-x64.dmg` / `-arm64.zip` / `-x64.zip` also attached) | in-app (signed manifest), or reinstall the newer DMG |
-| Windows 10+ x64 | `payback-<version>-windows-x64.msi` (portable `.zip` also attached) | in-app (signed manifest) |
-| Linux x64 | `payback-<version>-linux-x64.tar.gz` | in-app download + verify; extract the new tar.gz over the app directory |
+| macOS 14+ (Apple Silicon & Intel) | `payback-<version>-macos-<arch>.dmg` — `arm64` / `x64` — plus a portable `.zip` per arch | in-app (signed manifest), or reinstall the newer DMG |
+| Windows 10+ x64 | `payback-<version>-windows-x64.msi` installer, or `payback-<version>-windows-x64.zip` portable | in-app (signed manifest, passive `msiexec` handoff), or re-run the newer MSI |
+| Linux x64 / arm64 | `payback-<version>-linux-<arch>.tar.gz` / `payback-<version>-linux-<arch>.zip` portable, `payback-<version>-linux-<distro-arch>.deb`, `payback-<version>-linux-<toolchain-arch>.rpm`, or `payback-<version>-linux-<toolchain-arch>.AppImage` (bundled GTK4) | tarball: in-app download + verify, extract the new tar.gz over the app directory; deb / rpm / AppImage: upgrade through the package manager (or replace the AppImage file) — the updater is a no-op for these installs ([docs/UPDATE.md](docs/UPDATE.md)) |
 
 Every release carries a `SHA256SUMS` manifest and Sigstore build provenance
 (`gh attestation verify <file> -R turlamai/payback`).

@@ -18,9 +18,9 @@ Payback 的定位是已交付平台全部免费。不销售 Pro 授权，退役�
 
 | 平台 | 下载 | 更新 |
 |---|---|---|
-| macOS 14+（Apple 芯片） | `payback-<version>-macos-arm64.dmg` —— 拖入 Applications 即完成安装（另附 `-x64.dmg` 与两种架构的便携 `.zip`） | 应用内更新（签名清单），或重新安装新版 DMG |
-| Windows 10+ x64 | `payback-<version>-windows-x64.msi`（另附便携 `.zip`） | 应用内更新（签名清单） |
-| Linux x64 | `payback-<version>-linux-x64.tar.gz` | 应用内下载并校验；用新 tar.gz 覆盖应用目录 |
+| macOS 14+（Apple Silicon 与 Intel） | `payback-<version>-macos-<arch>.dmg`——`arm64` / `x64`，每种架构另附便携 `.zip` | 应用内更新（签名清单），或重新安装新版 DMG |
+| Windows 10+ x64 | `payback-<version>-windows-x64.msi` 安装器，或 `payback-<version>-windows-x64.zip` 便携版 | 应用内更新（签名清单，`msiexec` 静默交接），或重新运行新版 MSI |
+| Linux x64 / arm64 | `payback-<version>-linux-<arch>.tar.gz` / `payback-<version>-linux-<arch>.zip` 便携版、`payback-<version>-linux-<发行版架构>.deb`、`payback-<version>-linux-<工具链架构>.rpm`，或 `payback-<version>-linux-<工具链架构>.AppImage`（自带 GTK4） | tar.gz：应用内下载并校验，用新 tar.gz 覆盖应用目录；deb / rpm / AppImage：走系统包管理器升级（AppImage 直接替换文件）——这些安装形态不走应用内更新（[docs/UPDATE.md](docs/UPDATE.md)） |
 
 每个发布都带 `SHA256SUMS` 校验清单和 Sigstore 构建来源证明（`gh attestation verify <file> -R turlamai/payback`）。
 
