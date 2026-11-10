@@ -30,6 +30,7 @@
          installer-extension
          manifest-url
          destination-path
+         updater-config-for
          update-state-snapshot
          reset-update-state!
          perform-check!
@@ -118,6 +119,26 @@
   (string-append (string-trim base "/" #:right? #t)
                  "/update-manifest.json"))
 
+;; ---------- updater config ----------
+
+;; One construction site for the updater identity, shared by the check and
+;; the download (tests/updater-test.rkt exercises it directly so the live
+;; path cannot drift from the tested shape). The final argument is the feed
+;; component: this feed's artifacts carry the 'app component (rivet #271),
+;; and select-update matches config component against artifact component, so
+;; it must stay 'app — #f would silently select nothing from the real feed.
+(define (updater-config-for store settings)
+  (updater-config app-identifier
+                  app-version
+                  app-channel
+                  (platform-symbol)
+                  (architecture-symbol)
+                  (embedded-public-key)
+                  update-key-id
+                  (rollout-bucket store settings)
+                  maximum-download-bytes
+                  'app))
+
 ;; ---------- check ----------
 
 ;; Returns a wire jsexpr describing the outcome; also refreshes
@@ -136,16 +157,7 @@
                              #:key-id update-key-id))
     ;; fetch-update-manifest follows GitHub release-asset redirections
     ;; internally; it accepts only #:key-id and #:maximum-bytes.
-    (define config
-      (updater-config app-identifier
-                      app-version
-                      app-channel
-                      (platform-symbol)
-                      (architecture-symbol)
-                      (embedded-public-key)
-                      update-key-id
-                      (rollout-bucket store settings)
-                      maximum-download-bytes))
+    (define config (updater-config-for store settings))
     (define candidate (select-update config manifest))
     (store-mutate! store
                    (lambda (doc)
@@ -233,16 +245,7 @@
   (state-set! 'phase "downloading")
   (state-set! 'percent 0)
   (state-set! 'message 'null)
-  (define config
-    (updater-config app-identifier
-                    app-version
-                    app-channel
-                    (platform-symbol)
-                    (architecture-symbol)
-                    (embedded-public-key)
-                    update-key-id
-                    (rollout-bucket store settings)
-                    maximum-download-bytes))
+  (define config (updater-config-for store settings))
   (define destination (destination-path data-dir candidate))
   (set-box! last-progress-seconds (current-seconds))
   (define worker-thread

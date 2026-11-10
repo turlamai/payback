@@ -211,3 +211,34 @@
   (check-not-false
    (hash-ref (update-state-snapshot) 'message #f)
    "the error phase must carry a diagnostic message"))
+
+(test-case "shipped updater config selects the feed's app component"
+  ;; Regression: rivet #271 grew updater-config a required component field
+  ;; and the published feed's artifacts carry component 'app — the shipped
+  ;; call sites kept the old nine-argument shape, so every real check died
+  ;; with an arity error that the check's own error handler masked as a
+  ;; generic failure state (invisible to every offline test above, which
+  ;; all fail before the config is built). Build the config exactly the way
+  ;; the live check and download build it, then select against a manifest
+  ;; shaped like the published feed: the candidate must appear with 'app
+  ;; artifacts and must disappear with component-less ones, so neither a
+  ;; regression to the old arity nor a "fix" to component #f can pass.
+  (define store
+    (make-store
+     (build-path (make-temporary-file "payback-config-~a" 'directory)
+                 "local.json")))
+  (define settings (hash-ref (store-doc store) 'settings))
+  (define config (updater-config-for store settings))
+  (define (feed-manifest component)
+    (update-manifest app-identifier "9.9.9" 99 'stable
+                     "2026-11-01T00:00:00Z" "0.0.0" #f #t 100
+                     (list (update-artifact (platform-symbol)
+                                            (architecture-symbol)
+                                            "https://downloads.example.com/x.tar.gz"
+                                            "0000000000000000000000000000000000000000000000000000000000000000"
+                                            123456789 'targz '()
+                                            component))))
+  (check-true (update-candidate? (select-update config (feed-manifest 'app)))
+              "the shipped config must select 'app artifacts from the feed")
+  (check-false (select-update config (feed-manifest #f))
+               "component-less artifacts must not match the 'app config"))
