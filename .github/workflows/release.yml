@@ -196,7 +196,8 @@ jobs:
           set -euo pipefail
           # payback signs one merged feed in the publish job; the per-platform
           # channel manifest rivet emits here is not shipped. SBOM/notices are
-          # a taskly release artifact, not a payback one.
+          # a taskly release artifact, not a payback one — the root overview
+          # lives in THIRD_PARTY_NOTICES.md at the repository root.
           rm -f dist/update-*.json dist/sbom.cdx.json dist/THIRD_PARTY_NOTICES.txt
           # Family naming audit: rivet emits these exact names — the tar.gz
           # carries the update feed's x64/arm64 arch, deb the Debian arch,
