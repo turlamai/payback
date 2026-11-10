@@ -37,13 +37,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # x64 only: the feed's Linux entry is linux/x64 by design
+        # (docs/UPDATE.md — the arm64 tar.gz feed entry is held back until
+        # arm64 installs exist in the field), so an arm64 leg would find
+        # nothing to update and prove nothing; arm64 installs upgrade by
+        # manual extraction, outside the feed.
         include:
           - arch: x64
             runner: ubuntu-24.04
             racket-arch: x64
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-            racket-arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     steps:
@@ -306,6 +308,7 @@ jobs:
               format: "payback-published-upgrade-qualification",
               formatVersion: 1,
               arch: $arch,
+              archCoverage: "x64 only - the feed's Linux entry is linux/x64 by design (docs/UPDATE.md); arm64 tar.gz installs upgrade by manual extraction, outside the feed",
               installShape: "tar.gz extracted over the app directory (feed entry linux/targz; AppImage, deb and rpm are installer assets outside the feed)",
               throttleBypass: "direct updater entry points; the 4h auto-check throttle lives in the check-updates RPC and is never consulted",
               updaterSource: $updaterSource,
