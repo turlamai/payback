@@ -5,13 +5,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payback — 每一台设备，都在一天天回本</title>
-    <meta name="description" content="Payback: 记下购买价格，看着每日使用成本一天天降低；设定心理价位，看回本进度走满。macOS 与 Windows 原生应用。">
+    <meta name="description" content="Payback: 记下购买价格，看着每日使用成本一天天降低；设定心理价位，看回本进度走满。macOS、Windows 与 Linux 原生应用。">
     <link rel="canonical" href="https://payback.jrtx.site/">
     <meta name="theme-color" content="#D97757">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Payback">
     <meta property="og:title" content="Payback — Every device pays itself back">
-    <meta property="og:description" content="Record what you paid and Payback counts the daily cost down day after day. Set a worth-per-day and watch the payback ring fill. Native apps for macOS and Windows, local-first JSON storage.">
+    <meta property="og:description" content="Record what you paid and Payback counts the daily cost down day after day. Set a worth-per-day and watch the payback ring fill. Native apps for macOS, Windows and Linux, local-first JSON storage.">
     <meta property="og:url" content="https://payback.jrtx.site/">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Payback — Every device pays itself back">
@@ -85,7 +85,7 @@
                 <span class="kit-eyebrow" data-i18n="hero.eyebrow">开源 · 本地优先 · 原生应用 · 签名自动更新</span>
                 <h1><span data-i18n="hero.h1a">每一台设备，</span> <span class="kit-accent-word" data-i18n="hero.h1b">都在一天天回本</span></h1>
                 <p class="kit-text-2 pb-availability" data-i18n="hero.availability">开发预览。Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。</p>
-                <p class="kit-lead" data-i18n="hero.lead">记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。</p>
+                <p class="kit-lead" data-i18n="hero.lead">记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度环就会一天天走满。把每一次剁手，都变成一笔看得见的投资。</p>
                 <div class="kit-btn-row">
                     <div class="kit-dl">
                         <a class="kit-btn kit-btn--primary" data-kit-dl-primary href="https://github.com/turlamai/payback/releases/latest">
@@ -105,11 +105,16 @@
                     <a class="kit-btn kit-btn--ghost" href="https://github.com/turlamai/payback/releases"><span data-i18n="hero.all-releases">全部版本</span><span class="kit-btn-arrow">›</span></a>
                     <a class="kit-btn kit-btn--secondary" href="https://github.com/turlamai/payback" data-i18n="hero.cta-source">查看源码</a>
                 </div>
-                <p class="kit-hero-meta"><span class="kit-badge" data-i18n="hero.platforms">macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux（实验性）</span></p>
+                <p class="kit-hero-meta"><span class="kit-badge" data-i18n="hero.platforms">macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux</span></p>
             </div>
         </section>
 
         <!-- Add-a-device walkthrough -->
+        <!-- TODO(screenshot): img/payback-main-light.png and img/payback-milestone-sheet.png
+             show the pre-split-view single-list layout; both are unreferenced and stale
+             versus design/prototype (sidebar + detail split, DESIGN.md 2026-11-11).
+             Replace with real captures of the shipped 1.12 UI — do not fake shots
+             from the prototype HTML. -->
         <section class="kit-section kit-section--alt" id="shot">
             <div class="kit-container pb-shot">
                 <span class="kit-kicker" data-i18n="shot.kicker">上手</span>
@@ -133,12 +138,12 @@
                     <div class="kit-card">
                         <span class="kit-card-icon pb-emoji" aria-hidden="true">🎯</span>
                         <h3 data-i18n="f2.title">回本进度</h3>
-                        <p data-i18n="f2.body">设定你的心理价位：这台设备一天值多少钱？进度环走到 100% 的那一天，它就正式回本了。</p>
+                        <p data-i18n="f2.body">设定你的心理价位：这台设备一天值多少钱？进度环按天走满，还差多少、预计哪天回本，都算给你看——走到 100% 那一天，它就正式回本了。</p>
                     </div>
                     <div class="kit-card">
                         <span class="kit-card-icon pb-emoji" aria-hidden="true">💰</span>
                         <h3 data-i18n="f3.title">已赚回</h3>
-                        <p data-i18n="f3.body">全部设备超出价格的价值加在一起。库房页面里这个绿色数字只增不减——越用越赚的直观证据。</p>
+                        <p data-i18n="f3.body">全部设备超出价格的价值加在一起。总览里这块绿色数字只增不减——越用越赚的直观证据。</p>
                     </div>
                     <div class="kit-card">
                         <span class="kit-card-icon pb-emoji" aria-hidden="true">🏅</span>
@@ -148,12 +153,12 @@
                     <div class="kit-card">
                         <span class="kit-card-icon pb-emoji" aria-hidden="true">🖥️</span>
                         <h3 data-i18n="f5.title">真原生</h3>
-                        <p data-i18n="f5.body">基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3。所有数字一个引擎计算，分毫不差。</p>
+                        <p data-i18n="f5.body">基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3，Linux 是 GTK4。所有数字一个引擎计算，分毫不差。</p>
                     </div>
                     <div class="kit-card">
                         <span class="kit-card-icon pb-emoji" aria-hidden="true">📦</span>
-                        <h3 data-i18n="f6.title">数据可带走</h3>
-                        <p data-i18n="f6.body">全部数据是一个人类可读的 JSON 文件，原子写入、随手备份。你的账本永远是你的。</p>
+                        <h3 data-i18n="f6.title">数据与同步</h3>
+                        <p data-i18n="f6.body">账本是人类可读的单个 JSON 文件，原子写入、随手备份；放进任意网盘文件夹即可多机同步——任一台录入，处处可见。默认货币在设置里随时切换。</p>
                     </div>
                 </div>
             </div>
@@ -178,7 +183,7 @@
                         <p data-i18n="s3.body">进度走满的那一刻，Payback 替你宣布：这台设备，从今天起每天都在赚。</p>
                     </div>
                 </div>
-                <p class="kit-text-2" style="margin-top: 30px; max-width: 74ch;" data-i18n="how.note">数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/），随时可以备份带走。</p>
+                <p class="kit-text-2" style="margin-top: 30px; max-width: 74ch;" data-i18n="how.note">数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/，Linux: $XDG_DATA_HOME/payback/），随时可以备份带走。</p>
             </div>
         </section>
 
@@ -198,7 +203,7 @@
                     </a>
                     <a class="kit-card pb-dl-card" data-kit-dl="linux" href="https://github.com/turlamai/payback/releases/latest">
                         <h3>Linux</h3>
-                        <p data-i18n="dl.linux-body">实验性 · x64 / arm64 · deb / AppImage</p>
+                        <p data-i18n="dl.linux-body">x64 / arm64 · deb / rpm / AppImage</p>
                     </a>
                 </div>
                 <p class="kit-text-2" style="margin-top: 30px;"><a class="pb-dl-all" href="https://github.com/turlamai/payback/releases" data-i18n="download.all-releases">全部版本与历史下载（Intel DMG · rpm · tar.gz）</a></p>
@@ -221,7 +226,7 @@
                         <p data-i18n="start.s2.body">可设置每天愿意付出的价值，核对单个设备计算；这属于个人估算，不是投资收益。</p>
                     </div>
                     <div class="kit-step">
-                        <p data-i18n="start.s3.body">重新打开应用确认保存结果，再录入完整设备库或启用共享文件夹。</p>
+                        <p data-i18n="start.s3.body">重新打开应用确认保存结果，再录入完整设备库或开启同步文件夹。</p>
                     </div>
                 </div>
                 <p class="kit-text-2" style="margin-top: 30px; max-width: 62ch;"><span data-i18n="start.limits-a">跨币种汇总目前不可靠（</span><a href="https://github.com/turlamai/payback/issues/23">#23</a><span data-i18n="start.limits-b">），请保持同一币种并核对单设备金额。GTK 日期输入存在已知 ISO 日期缺陷（</span><a href="https://github.com/turlamai/payback/issues/22">#22</a><span data-i18n="start.limits-c">）。</span></p>
@@ -285,10 +290,10 @@
             "hero.h1a": "每一台设备，",
             "hero.h1b": "都在一天天回本",
             "hero.availability": "开发预览。Payback 的定位是已交付平台全部免费。旧设备数限制已退役；不销售 Pro 授权。",
-            "hero.lead": "记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度条就会一天天走满。把每一次剁手，都变成一笔看得见的投资。",
+            "hero.lead": "记下购买价格，Payback 帮你算每日使用成本——一天比一天便宜。再设定「这台设备一天值多少钱」的心理价位，回本进度环就会一天天走满。把每一次剁手，都变成一笔看得见的投资。",
             "hero.all-releases": "全部版本",
             "hero.cta-source": "查看源码",
-            "hero.platforms": "macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux（实验性）",
+            "hero.platforms": "macOS 14+（Apple Silicon / Intel）· Windows 10+ · Linux",
             "shot.kicker": "上手",
             "shot.title": "添加设备，核对每日成本",
             "shot.caption": "在设备列表中添加名称、价格和购买日期；保存后核对每日成本，并重新打开应用确认记录仍在。若没有显示，请检查保存结果和日期。",
@@ -296,16 +301,16 @@
             "features.kicker": "为什么是 Payback",
             "features.title": "越用越赚，看得见的数字",
             "f1.title": "每日成本", "f1.body": "价格 ÷ 持有天数，购买当天就算第一天。买来一年的千元机，今天可能只要每天两块钱——而且明天更低。",
-            "f2.title": "回本进度", "f2.body": "设定你的心理价位：这台设备一天值多少钱？进度环走到 100% 的那一天，它就正式回本了。",
-            "f3.title": "已赚回", "f3.body": "全部设备超出价格的价值加在一起。库房页面里这个绿色数字只增不减——越用越赚的直观证据。",
+            "f2.title": "回本进度", "f2.body": "设定你的心理价位：这台设备一天值多少钱？进度环按天走满，还差多少、预计哪天回本，都算给你看——走到 100% 那一天，它就正式回本了。",
+            "f3.title": "已赚回", "f3.body": "全部设备超出价格的价值加在一起。总览里这块绿色数字只增不减——越用越赚的直观证据。",
             "f4.title": "里程碑", "f4.body": "百日纪念、陪伴一整年、日均低于 1 元、完全回本……小小的成就徽章，真实的 dopamine。",
-            "f5.title": "真原生", "f5.body": "基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3。所有数字一个引擎计算，分毫不差。",
-            "f6.title": "数据可带走", "f6.body": "全部数据是一个人类可读的 JSON 文件，原子写入、随手备份。你的账本永远是你的。",
+            "f5.title": "真原生", "f5.body": "基于 Rivet：一份 Racket 核心嵌入进程内，macOS 是 SwiftUI，Windows 是 WinUI 3，Linux 是 GTK4。所有数字一个引擎计算，分毫不差。",
+            "f6.title": "数据与同步", "f6.body": "账本是人类可读的单个 JSON 文件，原子写入、随手备份；放进任意网盘文件夹即可多机同步——任一台录入，处处可见。默认货币在设置里随时切换。",
             "how.title": "三步开始",
             "s1.title": "记一笔", "s1.body": "设备名、emoji、价格、购买日期，十秒钟记完。想用回本进度就再填一个心理价位。",
             "s2.title": "看着它降", "s2.body": "每天打开看一眼：每日成本又低了一点，进度环又走了一格。时间开始为你工作。",
             "s3.title": "等它回本", "s3.body": "进度走满的那一刻，Payback 替你宣布：这台设备，从今天起每天都在赚。",
-            "how.note": "数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/），随时可以备份带走。",
+            "how.note": "数据存在本机 JSON 文件里（macOS: ~/Library/Application Support/Payback/，Windows: %APPDATA%/Payback/，Linux: $XDG_DATA_HOME/payback/），随时可以备份带走。",
             "download.kicker": "安装包与更新",
             "download.title": "下载",
             "dl.generic": "获取 Payback",
@@ -313,7 +318,7 @@
             "dl.note": "当前平台请前往 Releases 页面选取对应安装包。",
             "dl.mac-body": "14+ · Apple Silicon / Intel · DMG",
             "dl.win-body": "10+ · x64 · MSI",
-            "dl.linux-body": "实验性 · x64 / arm64 · deb / AppImage",
+            "dl.linux-body": "x64 / arm64 · deb / rpm / AppImage",
             "download.all-releases": "全部版本与历史下载（Intel DMG · rpm · tar.gz）",
             "download.note": "首次启动（未公证构建）：右键 → 打开。更新通过 Ed25519 签名清单自动推送，应用内「检查更新」随时可用。",
             "download.pricing": "所有已交付版本永久免费。旧版本的设备门禁正在退役，当前实现边界见产品政策。",
@@ -323,7 +328,7 @@
             "start.platforms": "提供 macOS、Windows、Linux 桌面预览版；移动端尚未交付。",
             "start.s1.body": "添加示例设备，填写购买价格、币种和日期。",
             "start.s2.body": "可设置每天愿意付出的价值，核对单个设备计算；这属于个人估算，不是投资收益。",
-            "start.s3.body": "重新打开应用确认保存结果，再录入完整设备库或启用共享文件夹。",
+            "start.s3.body": "重新打开应用确认保存结果，再录入完整设备库或开启同步文件夹。",
             "start.limits-a": "跨币种汇总目前不可靠（",
             "start.limits-b": "），请保持同一币种并核对单设备金额。GTK 日期输入存在已知 ISO 日期缺陷（",
             "start.limits-c": "）。",
@@ -346,7 +351,7 @@
             "hero.lead": "Record what you paid and Payback counts the daily cost down, day after day. Set what a day with the device is worth to you, and watch the payback ring fill up — turning every impulse buy into a visible investment.",
             "hero.all-releases": "All releases",
             "hero.cta-source": "View source",
-            "hero.platforms": "macOS 14+ (Apple Silicon / Intel) · Windows 10+ · Linux (experimental)",
+            "hero.platforms": "macOS 14+ (Apple Silicon / Intel) · Windows 10+ · Linux",
             "shot.kicker": "Quick start",
             "shot.title": "Add a device and verify its daily cost",
             "shot.caption": "Add a device name, price and purchase date; verify its daily cost after saving, then reopen the app and confirm the entry persists. If absent, check the save result and date.",
@@ -354,16 +359,16 @@
             "features.kicker": "Why Payback",
             "features.title": "Value you can see",
             "f1.title": "Daily cost", "f1.body": "Price ÷ days held, counting the purchase day as day one. A phone that cost a thousand might be down to two a day already — and tomorrow it's lower.",
-            "f2.title": "Payback progress", "f2.body": "Set your worth-per-day: what is one day with this device worth to you? The day the ring hits 100%, it has officially paid itself back.",
-            "f3.title": "Earned back", "f3.body": "Value gained beyond the price, summed across your whole library. The green number that only goes up — proof that using things pays.",
+            "f2.title": "Payback progress", "f2.body": "Set your worth-per-day: what is one day with this device worth to you? The ring fills day by day, with the amount still to earn and the break-even date worked out for you. At 100%, it has officially paid itself back.",
+            "f3.title": "Earned back", "f3.body": "Value gained beyond the price, summed across your whole library. The green number in the overview only goes up — proof that using things pays.",
             "f4.title": "Milestones", "f4.body": "100 days together, a full year, daily cost under 1, fully paid back… small badges, real dopamine.",
-            "f5.title": "Truly native", "f5.body": "Built on Rivet: one Racket core embedded in-process, SwiftUI on macOS, WinUI 3 on Windows. Every number computed by the same engine, to the cent.",
-            "f6.title": "Your data, portable", "f6.body": "Everything lives in one human-readable JSON file with atomic writes. Back it up, take it with you — the ledger is yours.",
+            "f5.title": "Truly native", "f5.body": "Built on Rivet: one Racket core embedded in-process, SwiftUI on macOS, WinUI 3 on Windows, GTK4 on Linux. Every number computed by the same engine, to the cent.",
+            "f6.title": "Data & sync", "f6.body": "Your ledger is one human-readable JSON file with atomic writes — back it up anytime. Point Payback at any synced folder and every machine sees the same devices: enter once, see it everywhere. The default currency is one switch in Settings.",
             "how.title": "Three steps",
             "s1.title": "Log it", "s1.body": "Name, emoji, price, purchase date — ten seconds. Add a worth-per-day if you want the payback ring.",
             "s2.title": "Watch it drop", "s2.body": "Open it each day: the daily cost is a little lower, the ring a little fuller. Time starts working for you.",
             "s3.title": "Break even", "s3.body": "The day the ring fills, Payback announces it: from today, this device earns.",
-            "how.note": "Data lives in a local JSON file (macOS: ~/Library/Application Support/Payback/, Windows: %APPDATA%/Payback/). Back it up anytime.",
+            "how.note": "Data lives in a local JSON file (macOS: ~/Library/Application Support/Payback/, Windows: %APPDATA%/Payback/, Linux: $XDG_DATA_HOME/payback/). Back it up anytime.",
             "download.kicker": "Installers & updates",
             "download.title": "Download",
             "dl.generic": "Get Payback",
@@ -371,7 +376,7 @@
             "dl.note": "Pick the right package from the Releases page for your platform.",
             "dl.mac-body": "14+ · Apple Silicon / Intel · DMG",
             "dl.win-body": "10+ · x64 · MSI",
-            "dl.linux-body": "Experimental · x64 / arm64 · deb / AppImage",
+            "dl.linux-body": "x64 / arm64 · deb / rpm / AppImage",
             "download.all-releases": "All releases & downloads (Intel DMG · rpm · tar.gz)",
             "download.note": "First launch (unsigned build): right-click → Open. Updates ship automatically via Ed25519-signed manifests; “Check for Updates” works in-app.",
             "download.pricing": "All delivered editions remain free. See the product policy for retirement of the legacy device gate and compatibility.",
@@ -381,7 +386,7 @@
             "start.platforms": "Desktop previews for macOS, Windows and Linux; mobile is not a current delivery.",
             "start.s1.body": "Add a sample device, its purchase price, currency and purchase date.",
             "start.s2.body": "Optionally set a personal worth-per-day, then check the individual device calculation. This is a personal estimate, not investment income.",
-            "start.s3.body": "Reopen the app to check persistence before importing your full inventory or enabling a shared folder.",
+            "start.s3.body": "Reopen the app to check persistence before importing your full inventory or turning on a sync folder.",
             "start.limits-a": "Mixed-currency totals are currently unsafe (",
             "start.limits-b": "); use one currency and check per-device amounts. GTK date entry has a known ISO-date defect (",
             "start.limits-c": ").",
