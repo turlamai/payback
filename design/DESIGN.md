@@ -65,3 +65,19 @@
 4. 亮暗成对：每屏每状态两套齐备；暗色 accent/earn 提亮、分类 tint 提高 alpha；三端 token 同值，不存在只有暗态的界面。
 5. 保存生命周期跨端一致：保存中禁 Save/Cancel 且 sheet 不可关闭；失败 banner 在表单内、字段原样保留、Save 变 Retry；成功恰好关闭一次；Return=保存、Esc=取消。
 6. 主操作按钮永远品牌橙底 + 对比色文字（暗色下文字转 paper 色），禁止用平台 suggested-action 强调色（防漂出契约色板）。
+
+
+## 平台映射与差异声明（预钉 · 宿主实现时升级为落点表）
+
+统一层（三平台必须一致，`design/prototype/` 原型已锁定）：信息架构、核心流程、快捷键语义、
+语义色与层级词汇。因地制宜层（按平台惯例落地，不预画像素）：
+
+| 维度 | macOS | Windows | Linux |
+|---|---|---|---|
+| 修饰键 | ⌘ | Ctrl | Ctrl |
+| 命令入口 | 原生菜单栏 | 菜单栏/命令行内 | 菜单栏 |
+| 字体 | 系统栈 + PingFang SC | 系统栈 + Microsoft YaHei | 系统栈 + Noto Sans CJK |
+| 原生控件 | SwiftUI 控件 | WinUI 3 控件 | GTK4 控件 |
+
+差异声明纪律：宿主特例必须先写进本节才能实现；未声明的宿主差异按违约处理
+（案例：taskly 漂移台账 D8）。
