@@ -73,7 +73,7 @@ a { color: inherit; text-decoration: none; }
 .section.alt > * { max-width: 1040px; margin-left: auto; margin-right: auto; }
 .section h2 { font-size: clamp(26px, 4vw, 34px); letter-spacing: -0.02em; margin-bottom: 34px; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 18px; }
 .card {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 24px;
@@ -84,7 +84,7 @@ a { color: inherit; text-decoration: none; }
 .card h3 { font-size: 17px; margin-bottom: 8px; }
 .card p { font-size: 14.5px; color: var(--muted); }
 
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 18px; }
 .step {
   background: var(--bg); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 24px;
@@ -99,7 +99,7 @@ a { color: inherit; text-decoration: none; }
 
 .note { margin-top: 26px; font-size: 13.5px; color: var(--muted); }
 
-.dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; max-width: 780px; }
+.dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 18px; max-width: 780px; }
 .dl-card {
   display: block; background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 28px; text-align: center;
@@ -249,3 +249,10 @@ a { color: inherit; text-decoration: none; }
 :root[data-theme="dark"] .manual-shot,
 :root[data-theme="dark"] .shot-section img { box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45); }
 :root[data-theme="dark"] .manual-table th { color: var(--muted); }
+
+/* Mobile: keep every navigation action reachable without widening the page. */
+@media (max-width: 700px) {
+  .nav-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .nav-links { width: 100%; min-width: 0; display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: 13px; }
+  .hero-actions { flex-wrap: wrap; }
+}
