@@ -35,7 +35,7 @@ finish-args:
   # Check-for-Updates forces one — both fetch update-manifest.json over
   # HTTPS, and a consented update downloads the verified tar.gz. In a
   # flatpak the install step stays a manual replace like the deb/rpm/
-  # AppImage forms (docs/UPDATE.md); the network grant covers the check and
+  # AppImage forms (docs/update.md); the network grant covers the check and
   # download the app genuinely performs.
   - --share=network
   # No filesystem grant: data lives in $XDG_DATA_HOME/payback, which the

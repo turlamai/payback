@@ -46,6 +46,6 @@ For sensitive vulnerabilities, follow the private process in [SECURITY.md](../SE
 
 - [Data and calculations](../docs/data-format.md)
 - [Sync and recovery](../docs/sync-design.md)
-- [Updates](../docs/UPDATE.md)
+- [Updates](../docs/update.md)
 - [Project overview and development](../README.md)
 - [Current licence](../LICENSE)

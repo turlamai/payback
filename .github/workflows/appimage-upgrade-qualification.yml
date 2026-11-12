@@ -10,7 +10,7 @@ name: Published upgrade qualification (N -> N+1)
 # offline tests never prove an upgrade; the evidence artifact this workflow
 # uploads does.
 #
-# Install shape: payback's feed is tar.gz-only by design (docs/UPDATE.md) —
+# Install shape: payback's feed is tar.gz-only by design (docs/update.md) —
 # AppImage/deb/rpm are installer assets that upgrade outside the app — so
 # this workflow qualifies the in-app update path and records `installShape`
 # in the evidence; the file name keeps the family workflow name.
@@ -308,7 +308,7 @@ jobs:
               format: "payback-published-upgrade-qualification",
               formatVersion: 1,
               arch: $arch,
-              archCoverage: "x64 only - the Linux feed entry is linux/x64 by design (docs/UPDATE.md); arm64 tar.gz installs upgrade by manual extraction, outside the feed",
+              archCoverage: "x64 only - the Linux feed entry is linux/x64 by design (docs/update.md); arm64 tar.gz installs upgrade by manual extraction, outside the feed",
               installShape: "tar.gz extracted over the app directory (feed entry linux/targz; AppImage, deb and rpm are installer assets outside the feed)",
               throttleBypass: "direct updater entry points; the 4h auto-check throttle lives in the check-updates RPC and is never consulted",
               updaterSource: $updaterSource,
