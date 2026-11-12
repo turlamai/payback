@@ -20,3 +20,9 @@ rivet-schema.json
 
 # local SwiftPM scratch (manual swift build; rivet builds use .rivet/build)
 macos-host/.build/
+
+# local release artifacts (raco rivet release / signing dry runs) stay out
+# of the repo; published payloads live on GitHub Releases only
+/*.dmg
+/*.zip
+/*.sha256
