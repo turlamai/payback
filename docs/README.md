@@ -5,7 +5,7 @@
 - [English user guide](USER-GUIDE.md) · [简体中文](USER-GUIDE.zh-CN.md): availability, installation, first use, data/recovery, network/privacy and support.
 - [Data and calculations](../docs/data-format.md)
 - [Sync and recovery](../docs/sync-design.md)
-- [Updates](../docs/UPDATE.md)
+- [Updates](../docs/update.md)
 
 ## Maintain the product
 
