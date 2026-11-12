@@ -10,13 +10,13 @@ assessment of impact. You will get an acknowledgment within 72 hours.
 
 Security-sensitive areas:
 
-- **The update trust chain** (`app/updater.rkt`, `docs/UPDATE.md`):
+- **The update trust chain** (`app/updater.rkt`, `docs/update.md`):
   Ed25519 manifest verification, key handling, SHA-256 artifact checks, and
   the install/rollback steps in the native hosts. Manifest signature or
   artifact-verification reports are treated as high priority.
 - **The update signing key**: the private key must never enter the
   repository or a release artifact. If it leaks, rotate immediately per
-  `docs/UPDATE.md` (ship a trusting build first, then flip `key_id`).
+  `docs/update.md` (ship a trusting build first, then flip `key_id`).
 - **RPC input handling** (`app/wire.rkt`): device payloads are validated at
   the Racket boundary before reaching storage.
 

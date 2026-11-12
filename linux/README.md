@@ -35,4 +35,4 @@ cd payback-linux-x64 && ./RivetHost
 Data lives in `$XDG_DATA_HOME/payback` (default `~/.local/share/payback`),
 the UI language choice in `~/.local/share/payback/ui-language.txt`. Updates
 download and verify in-app; extract the new tar.gz over the app directory to
-finish an update (docs/updates.md).
+finish an update (docs/update.md).

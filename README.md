@@ -20,7 +20,7 @@ Download from [Releases](https://github.com/turlamai/payback/releases/latest):
 |---|---|---|
 | macOS 14+ (Apple Silicon & Intel) | `payback-<version>-macos-<arch>.dmg` — `arm64` / `x64` — plus a portable `.zip` per arch | in-app (signed manifest), or reinstall the newer DMG |
 | Windows 10+ x64 | `payback-<version>-windows-x64.msi` installer, or `payback-<version>-windows-x64.zip` portable | in-app (signed manifest, passive `msiexec` handoff), or re-run the newer MSI |
-| Linux x64 / arm64 | `payback-<version>-linux-<arch>.tar.gz` / `payback-<version>-linux-<arch>.zip` portable, `payback-<version>-linux-<distro-arch>.deb`, `payback-<version>-linux-<toolchain-arch>.rpm`, `payback-<version>-linux-<toolchain-arch>.AppImage` (bundled GTK4), or a `payback-<version>-linux-<arch>.flatpak` bundle (app id `site.jrtx.payback`; install with `flatpak --user install`) | tarball: in-app download + verify, extract the new tar.gz over the app directory; deb / rpm / AppImage: upgrade through the package manager (or replace the AppImage file); Flatpak bundle: install the newer bundle the same way — the updater is a no-op for these installs ([docs/UPDATE.md](docs/UPDATE.md)) |
+| Linux x64 / arm64 | `payback-<version>-linux-<arch>.tar.gz` / `payback-<version>-linux-<arch>.zip` portable, `payback-<version>-linux-<distro-arch>.deb`, `payback-<version>-linux-<toolchain-arch>.rpm`, `payback-<version>-linux-<toolchain-arch>.AppImage` (bundled GTK4), or a `payback-<version>-linux-<arch>.flatpak` bundle (app id `site.jrtx.payback`; install with `flatpak --user install`) | tarball: in-app download + verify, extract the new tar.gz over the app directory; deb / rpm / AppImage: upgrade through the package manager (or replace the AppImage file); Flatpak bundle: install the newer bundle the same way — the updater is a no-op for these installs ([docs/update.md](docs/update.md)) |
 
 Every release carries a `SHA256SUMS` manifest and Sigstore build provenance
 (`gh attestation verify <file> -R turlamai/payback`).
@@ -73,7 +73,7 @@ contract): atomic writes, human-readable, easy to back up.
   [#20](https://github.com/turlamai/payback/issues/20); releases older
   than that change may still enforce it.
 - **Signed online updates from v1.0.0** — Ed25519-verified release manifests,
-  SHA-256-checked artifacts, staged rollouts ([docs/UPDATE.md](docs/UPDATE.md))
+  SHA-256-checked artifacts, staged rollouts ([docs/update.md](docs/update.md))
 
 ## Building
 
@@ -103,7 +103,7 @@ backend on all three OSes.
 All user-visible numbers are computed in Racket so both platforms agree to
 the cent. The data model, RPC surface, milestone rules, and validation limits
 are documented in [docs/data-format.md](docs/data-format.md); the update
-trust chain in [docs/UPDATE.md](docs/UPDATE.md).
+trust chain in [docs/update.md](docs/update.md).
 
 ## Repository
 
@@ -115,7 +115,7 @@ payback/
 ├── windows/              WinUI 3 host (C++/WinRT)
 ├── shared/strings/       zh/en UI strings — single source, generated tables
 ├── scripts/              gen-strings.js · gen-update-keys.sh · check-release-version.sh
-├── docs/                 data-format.md · UPDATE.md
+├── docs/                 data-format.md · update.md
 └── rivet.rktd            app identity, version, deployment targets
 ```
 

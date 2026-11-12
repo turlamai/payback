@@ -28,7 +28,7 @@ On macOS, `raco rivet package` should also succeed for UI-touching changes.
 - **Update behavior is verified, not assumed.** Anything touching
   `app/updater.rkt` or the native install adapters needs a test in
   `tests/updater-test.rkt` and, where relevant, a note in
-  `docs/updates.md`.
+  `docs/update.md`.
 - **Validation limits and error messages are user-facing.** The native hosts
   show backend messages verbatim, so write them for end users.
 - Prefer small, focused pull requests with a clear failure mode and a
@@ -38,5 +38,5 @@ On macOS, `raco rivet package` should also succeed for UI-touching changes.
 ## Releasing
 
 Releases are tag-driven; the mechanics (signing, manifest, upload layout)
-are in `docs/updates.md`. Bump `version`/`build` in `rivet.rktd` and mirror
+are in `docs/update.md`. Bump `version`/`build` in `rivet.rktd` and mirror
 them in `app/version.rkt` — both must match in the same release commit.

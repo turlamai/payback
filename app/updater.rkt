@@ -2,7 +2,7 @@
 
 ;; Online update support for Payback, built on rivet/distribution. The
 ;; backend verifies and downloads signed update artifacts; the native host
-;; owns installation (docs/UPDATE.md). A check downloads and verifies the
+;; owns installation (docs/update.md). A check downloads and verifies the
 ;; Ed25519-signed update-manifest.json — the family single-file wrapper
 ;; carrying every platform and architecture; the actual DMG/MSI download
 ;; runs on a background thread with progress published to a state box that
@@ -61,7 +61,7 @@
 
 ;; rivet/distribution pins the libcrypto factory at its module load; the
 ;; embedded DER is the public half of keys/update-ed25519-private.der, which
-;; never ships (docs/updates.md).
+;; never ships (docs/update.md).
 (define (embedded-public-key)
   (bytes->ed25519-public-key (base64-string->bytes update-public-key-b64)))
 
