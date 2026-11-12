@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the Payback update feed for a release and sign it — the family
 # single-file wrapper (taskly baseline, shared spec: taskly
-# shared/spec/UPDATE.md).
+# docs/update.md).
 #
 # Usage: scripts/make-update-manifest.sh <tag> <dist-dir> <key-der-path>
 #   <tag>          release tag, e.g. v1.5.0 (must match the VERSION file,
