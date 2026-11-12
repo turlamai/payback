@@ -31,7 +31,13 @@
   (parameterize ([current-app-data-dir tmp-dir])
     (thread (lambda () (serve server-in server-out)))))
 
-(define (read-frame/timeout in [seconds 5])
+;; 120s: check-updates against the unreachable port exercises rivet's
+;; manifest transport retry (3 attempts with backoff), and on Windows an
+;; unlisted localhost port can DROP instead of refusing, so a single
+;; connect can park for the OS TCP timeout (~21s) — three attempts can
+;; exceed a minute. The suite asserts the never-crash contract, not
+;; latency.
+(define (read-frame/timeout in [seconds 120])
   (define result (make-channel))
   (thread (lambda () (channel-put result (read-frame in))))
   (define value (sync/timeout seconds result))
