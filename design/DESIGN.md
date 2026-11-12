@@ -30,24 +30,20 @@
 - **防错一致**：保存生命周期不可绕过——保存中禁操作、失败 banner 在表单内、字段原样保留、成功恰好关闭一次；Return=保存、Esc=取消跨端一致（`docs/save-lifecycle.md`）。
 - **回报可感知但克制**：里程碑 emoji 胶囊、快报一行、已回本胶囊；卡片上里程碑最多 2 枚 + 计数，庆贺集中在庆祝 sheet，不满屏撒绿。
 
-## Tokens（与实现 1:1）
+## Tokens（语义；值不在此复制）
 
-| Token | Light | Dark | 用途 |
-|---|---|---|---|
-| `--paper` | `#FAF7F2` | `#1F1D1A` | 页面底色（窗口画布） |
-| `--card` | `#FFFFFF` | `#2B2926` | 卡片表面（轻微纵向渐变 + 浅投影） |
-| `--hover` | `#F3EEE6` | `#34322E` | 悬浮/选中底（Windows `PaybackCardHoverBrush`） |
-| `--line` | `#E8E2D9` | `#3A3835` | 发丝边框/分隔 |
-| `--ink` | `#3A3630` | `#E8E4DD` | 主文字（Linux 实现值；macOS/Windows 用系统 label 色） |
-| `--mute` | `#7D7A74` | `#A29E99` | 次级文字（实现端为 secondary / ink 65% 透明，原型物化为固定值） |
-| `--accent` | `#C15F3C` | `#D98A66` | 品牌橙（Crail）：进度环、主按钮、曲线、进行态 |
-| `--accent-soft` | accent 14% | accent 14% | 徽标底、空状态底、未设价位提示卡 |
-| `--earn` | `#38964D` | `#57B26B` | **只**用于「已回本/已赚回」状态 |
-| `--earn-soft` | earn 14% | earn 14% | 回本后 hero 卡/进度区底色 |
-| `--warning` | `#B25E09` | `#E8A33D` | 同步警告（网盘冲突副本等） |
-| `--track` | 黑 15% | 白 15% | 进度环/进度条底槽 |
+值类 token 真源 = `docs/design.md`（契约基线）与三端实现（`macos-host/Sources/RivetHost/PaybackTheme.swift` 色板/部件单源 · `windows/App.xaml` ThemeDictionaries · `linux/src/main.cpp` `apply_css`）；原型 `design/prototype/shared.css` 与文档值一一对应，本表只记语义。发现待对齐：Windows 暗色 accent 实现值 `#DE8B6F` 与 `docs/design.md`/Linux 的 `#D98A66` 不一致——原型取文档值，Windows 宿主应对齐（三端同值）。
 
-分类 tint（图标徽章底色，实现为跨主题同色相、暗色提高 alpha）：computer 蓝 `rgba(0,122,255,.14/.20)` · phone 青 `rgba(48,176,199,.14/.20)` · tablet 靛 `rgba(88,86,214,.14/.20)` · watch 薄荷 `rgba(0,199,190,.18/.24)` · audio 紫 `rgba(175,82,222,.14/.20)` · camera 橙黄 `rgba(255,149,0,.16/.22)` · gaming 红 `rgba(255,59,48,.13/.19)` · appliance 天青 `rgba(50,173,230,.15/.21)` · accessory 薄荷 `rgba(0,199,190,.16/.22)` · other = `--accent-soft`。破坏性操作（停止同步/删除）文字用系统 destructive 红、跟随平台语义色，不进品牌色板。
+| Token | 语义 |
+|---|---|
+| `--paper --card --hover --line` | 页面底 / 卡片（纵向渐变+浅投影）/ 悬浮选中 / 发丝边框分隔 |
+| `--ink --mute` | 主/次级文字（实现端为系统 label 色 / ink 65% 透明，原型物化为固定值） |
+| `--accent --accent-soft` | 品牌橙 Crail：进度环/主按钮/曲线/进行态 + 弱底（徽标/空状态/未设价位提示卡） |
+| `--earn --earn-soft` | **只**用于「已回本/已赚回」状态 + 回本后 hero 卡/进度区底色 |
+| `--warning` | 同步警告（网盘冲突副本等） |
+| `--track` | 进度环/进度条底槽（黑 15% / 白 15%） |
+
+分类 tint（图标徽章底色）：computer 蓝 · phone 青 · tablet 靛 · watch 薄荷 · audio 紫 · camera 橙黄 · gaming 红 · appliance 天青 · accessory 薄荷 · other = `--accent-soft`——实现为跨主题同色相、暗色提高 alpha（值见 PaybackTheme.swift）。破坏性操作（停止同步/删除）文字用系统 destructive 红、跟随平台语义色，不进品牌色板。
 
 - **字体**：`system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei"`。原生实现金额/百分比用 rounded design + `monospacedDigit`（原型以 `tabular-nums` 等价；rounded 字形由原生端兑现，Web 原型不引入外部字体）。大数字 title2 bold（22px），详情名 22px/700，行标题 600（16px），次级 13px，辅助 12px。
 - **圆角**：卡片 16px（continuous）· 统计 tile 14px · 列表行/控件 10px · 胶囊 999px。**间距节奏**：4/8/12/16/24。**动效**：进度环入场 0.9s easeOut，其余 120ms ease，不过度。
