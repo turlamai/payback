@@ -46,6 +46,6 @@ Payback 的定位是已交付平台全部免费。旧设备数限制已退役；
 
 - [数据与计算](../docs/data-format.md)
 - [同步与恢复](../docs/sync-design.md)
-- [更新](../docs/UPDATE.md)
+- [更新](../docs/update.md)
 - [项目说明与开发入口](../README.zh-CN.md)
 - [现行许可证](../LICENSE)

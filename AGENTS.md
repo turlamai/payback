@@ -86,7 +86,7 @@ Windows 打包（v1.4.1 两个发版事故的教训）：**后端 crypto 只许�
 | `docs/data-format.md` | JSON 存储布局、设备记录字段、computed 块（日均/回本/里程碑）、summary、RPC 面、校验上限 |
 | `docs/save-lifecycle.md` | 保存/草稿生命周期交互契约：idle→saving→failed/saved、失败注入与恢复、键盘语义、验收证据映射 |
 | `docs/sync-design.md` | 多端同步契约（数据格式 v2）：BYO 文件夹零服务器、机器分片单写者、tombstone、记录级 LWW、settings 同步白名单、平台落点、M1–M4 拆步。**M1 已实施**（`app/sync.rkt` + 三 RPC，1.11.0），进度在 #9 |
-| `docs/UPDATE.md` | 更新信任链（Ed25519 清单→SHA-256 工件→原生安装）、平台×架构矩阵、发布流程、密钥轮换 |
+| `docs/update.md` | 更新信任链（Ed25519 清单→SHA-256 工件→原生安装）、平台×架构矩阵、发布流程、密钥轮换 |
 | `shared/strings/strings.json` | 全部用户可见文案（zh/en 单源） |
 | `rivet.rktd` | 应用标识、版本、build 号、部署目标 |
 
@@ -104,7 +104,7 @@ Windows 打包（v1.4.1 两个发版事故的教训）：**后端 crypto 只许�
 
 ## 更新签名密钥
 
-`keys/update-ed25519-private.der` 永不入库（gitignore）；公钥 base64 内嵌在 `app/version.rkt`。生成/轮换用 `scripts/gen-update-keys.sh`。发布时 CI 走 secret `UPDATE_ED25519_PRIVATE_KEY_B64`；本地走环境变量（见 docs/UPDATE.md）。主备份在 Sync/Keys 密钥库（`payback-updater-private.der.age` + `payback-keys.README.md`）。
+`keys/update-ed25519-private.der` 永不入库（gitignore）；公钥 base64 内嵌在 `app/version.rkt`。生成/轮换用 `scripts/gen-update-keys.sh`。发布时 CI 走 secret `UPDATE_ED25519_PRIVATE_KEY_B64`；本地走环境变量（见 docs/update.md）。主备份在 Sync/Keys 密钥库（`payback-updater-private.der.age` + `payback-keys.README.md`）。
 
 **Racket crypto 坑**：ed25519 私钥的 `rkt-private` datum 元素顺序不固定（DER 导入是 `(vk sk)`，新生成是 `(sk vk)`），公钥一律用 `pk-key->datum priv 'rkt-public` 派生，禁止按下标取元素。
 
@@ -124,7 +124,7 @@ payback/
 ├── linux/                GTK4 宿主：src/main.cpp（单文件全流程）+ Strings.h(生成)
 ├── shared/strings/       strings.json 文案单源
 ├── scripts/              gen-strings.js（生成+校验）· gen-update-keys.sh · check-release-version.sh · make-update-manifest.sh
-├── docs/                 data-format.md · sync-design.md · UPDATE.md · design.md · platform-roadmap.md
+├── docs/                 data-format.md · sync-design.md · update.md · design.md · platform-roadmap.md
 ├── keys/                 更新签名公钥（私钥 gitignore）
 └── rivet.rktd
 ```
@@ -136,7 +136,7 @@ payback/
 - **改文案**：只改 `shared/strings/strings.json` + 跑生成器
 - **改里程碑规则**：`app/domain.rkt` 的 ladder + `docs/data-format.md` + 两端 `MilestoneBadge`/`milestone_*` 本地化
 - **做多端同步（v1.4）**：M1 已落地——`app/sync.rkt`（分片扫描/合并/claim 写入）+ `sync-state`/`configure-sync`/`rename-machine` RPC + 各宿主设置段；改合并语义先跑 `tests/sync-test.rkt` 黄金夹具（纯 JSON 数据文件，未来移动端核心共用）；三宿主刷新走 5 秒 `sync-state` 轮询、`revision` 变化即 `load-all`；共享层改动前在 #9 声明单写窗口
-- **发布**：确认 `VERSION` / `rivet.rktd` / `app/version.rkt` / CHANGELOG 四处一致后打 `vX.Y.Z` tag 推送，CI 全自动出三平台安装包 + 便携 zip + 签名清单 `update-manifest.json` + GitHub Release（见 docs/UPDATE.md 和 .github/workflows/release.yml）
+- **发布**：确认 `VERSION` / `rivet.rktd` / `app/version.rkt` / CHANGELOG 四处一致后打 `vX.Y.Z` tag 推送，CI 全自动出三平台安装包 + 便携 zip + 签名清单 `update-manifest.json` + GitHub Release（见 docs/update.md 和 .github/workflows/release.yml）
 
 ## 组合定位（Portfolio placement）
 
