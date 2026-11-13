@@ -75,29 +75,44 @@
                'downloadedPath 'null
                'availableVersion 'null)))
 
-(define candidate-box (box #f))
-(define worker-thread-box (box #f))
-
-;; Download watchdog bounds. rivet's copy loop waits on read-bytes-avail!
-;; with no timeout, so a connection that stalls without RST/FIN parks the
-;; worker thread forever — visibly "stuck at 100%" (all bytes had arrived;
-;; the loop was still waiting for EOF). Two finite bounds keep the phase
-;; machine honest: no byte progress for the stall limit, or wall clock past
-;; the total limit, breaks the worker (rivet's partial-file cleanup runs,
-;; and the worker reports phase=error itself) so the UI always gets a
-;; terminal state.
-(define download-stall-limit-seconds 120)
-(define download-total-limit-seconds (* 30 60))
-(define last-progress-seconds (box 0))
+;; The managed updater owns the authenticated check/download lifecycle:
+;; candidate selection, progress, the stall/total watchdog, cancellation,
+;; and the terminal state. This module only maps its snapshot onto the wire
+;; shape the UI polls and keeps the product-owned key/config/destination.
+(define updater-box (box #f))
+(define download-root-box (box #f))
 
 (define (state-set! key value)
   (set-box! update-state (hash-set (unbox update-state) key value)))
 
+(define (managed-state->product state)
+  (define phase (hash-ref state 'phase "idle"))
+  ;; The product's UI treats "available"/"up-to-date"/"cancelled" as idle;
+  ;; the available version and terminal error message carry the signal.
+  (define mapped-phase
+    (case phase
+      [("available" "up-to-date" "cancelled") "idle"]
+      [else phase]))
+  (hasheq 'phase mapped-phase
+          'percent (if (string=? mapped-phase "idle")
+                       0
+                       (hash-ref state 'percent 0))
+          'message (let ([message (hash-ref state 'message #f)])
+                     (if message message 'null))
+          'downloadedPath (let ([path (hash-ref state 'downloadedPath #f)])
+                            (if path path 'null))
+          'availableVersion (let ([version (hash-ref state 'availableVersion #f)])
+                              (if version version 'null))))
+
 (define (update-state-snapshot)
-  (unbox update-state))
+  (define instance (unbox updater-box))
+  (if instance
+      (managed-state->product (updater-state instance))
+      (unbox update-state)))
 
 (define (reset-update-state!)
-  (set-box! candidate-box #f)
+  (set-box! updater-box #f)
+  (set-box! download-root-box #f)
   (set-box! update-state
             (hasheq 'phase "idle"
                     'percent 0
@@ -139,51 +154,51 @@
                   maximum-download-bytes
                   'app))
 
+;; ---------- managed updater ----------
+
+;; One managed instance owns the authenticated check/download lifecycle;
+;; the product supplies its key, feed, component and staging path.
+(define (make-payback-updater store settings)
+  (make-updater
+   #:application-id app-identifier
+   #:current-version app-version
+   #:channel app-channel
+   #:platform (platform-symbol)
+   #:architecture (architecture-symbol)
+   #:component 'app
+   #:public-key (embedded-public-key)
+   #:key-id update-key-id
+   #:manifest-url (manifest-url settings)
+   #:data-directory (find-system-path 'pref-dir)
+   #:destination
+   (lambda (candidate)
+     (destination-path (or (unbox download-root-box)
+                           (find-system-path 'pref-dir))
+                       candidate))
+   #:rollout-bucket (rollout-bucket store settings)
+   #:maximum-download-bytes maximum-download-bytes))
+
 ;; ---------- check ----------
 
-;; Returns a wire jsexpr describing the outcome; also refreshes
-;; "lastUpdateCheckAt" (epoch seconds) in the store on every completed check.
+;; Returns the managed wire result; also refreshes "lastUpdateCheckAt"
+;; (epoch seconds) in the store on every completed check.
 (define (perform-check! store settings)
-  (state-set! 'phase "checking")
   (with-handlers
       ([exn:fail?
         (lambda (e)
           (state-set! 'phase "error")
           (state-set! 'message (exn-message e))
           (hasheq 'status "error" 'message (exn-message e)))])
-    (define manifest
-      (fetch-update-manifest (manifest-url settings)
-                             (embedded-public-key)
-                             #:key-id update-key-id))
-    ;; fetch-update-manifest follows GitHub release-asset redirections
-    ;; internally; it accepts only #:key-id and #:maximum-bytes.
-    (define config (updater-config-for store settings))
-    (define candidate (select-update config manifest))
-    (store-mutate! store
-                   (lambda (doc)
-                     (values
-                      (settings-with doc 'lastUpdateCheckAt (current-seconds))
-                      (void))))
-    (cond
-      [candidate
-       (set-box! candidate-box candidate)
-       (define artifact (update-candidate-artifact candidate))
-       (state-set! 'phase "idle")
-       (state-set! 'availableVersion
-                   (update-manifest-version (update-candidate-manifest candidate)))
-       (hasheq 'status "available"
-               'currentVersion app-version
-               'availableVersion
-               (update-manifest-version (update-candidate-manifest candidate))
-               'build (update-manifest-build (update-candidate-manifest candidate))
-               'publishedAt
-               (update-manifest-published-at (update-candidate-manifest candidate))
-               'installer (symbol->string (update-artifact-installer artifact))
-               'sizeBytes (update-artifact-size artifact))]
-      [else
-       (state-set! 'phase "idle")
-       (state-set! 'availableVersion 'null)
-       (hasheq 'status "up-to-date" 'currentVersion app-version)])))
+    (define instance (make-payback-updater store settings))
+    (set-box! updater-box instance)
+    (define result (updater-check! instance))
+    (unless (equal? (hash-ref result 'status #f) "error")
+      (store-mutate! store
+                     (lambda (doc)
+                       (values
+                        (settings-with doc 'lastUpdateCheckAt (current-seconds))
+                        (void)))))
+    result))
 
 ;; helper producing a document with one settings key replaced
 (define (settings-with doc key value)
@@ -201,10 +216,13 @@
     [else
      (define bucket
        (modulo (integer-bytes->integer (crypto-random-bytes 4) #t #t) 100))
-     (store-mutate! store
-                    (lambda (doc)
-                      (values (settings-with doc 'rolloutBucket bucket)
-                              (void))))
+     ;; A headless check may have no store (the live-check regression test
+     ;; passes #f); a random bucket still lets the signed feed selection run.
+     (when store
+       (store-mutate! store
+                      (lambda (doc)
+                        (values (settings-with doc 'rolloutBucket bucket)
+                                (void)))))
      bucket]))
 
 ;; ---------- download ----------
@@ -217,74 +235,12 @@
               (string-append app-display-name "-" version
                              (installer-extension))))
 
-;; rivet's download-update owns the whole artifact path — redirect-following
-;; fetch (the rivet#153 302 shape), signed-size cap, .partial cleanup on
-;; any failure, SHA-256 + size verification against the signed manifest,
-;; atomic rename — so the wrapper only maps its byte progress onto the
-;; integer percent the UI polls, and feeds the watchdog's stall clock on
-;; every report.
-(define (download-with-progress! config candidate destination)
-  (define total (update-artifact-size (update-candidate-artifact candidate)))
-  (download-update
-   config candidate destination
-   #:on-progress
-   (lambda (done)
-     (set-box! last-progress-seconds (current-seconds))
-     (state-set! 'percent
-                 (if (> total 0)
-                     (min 100 (quotient (* done 100) total))
-                     0)))))
-
 (define (start-download! store settings data-dir)
-  (define worker (unbox worker-thread-box))
-  (when (and worker (thread-running? worker))
-    (error 'start-download! "an update download is already running"))
-  (define candidate (unbox candidate-box))
-  (unless candidate
+  ;; The managed instance already owns the checked candidate, the worker,
+  ;; the watchdog, and the terminal state. The staging directory is chosen
+  ;; by the product; the destination callback reads it here.
+  (define instance (unbox updater-box))
+  (unless instance
     (error 'start-download! "no update is available; run a check first"))
-  (state-set! 'phase "downloading")
-  (state-set! 'percent 0)
-  (state-set! 'message 'null)
-  (define config (updater-config-for store settings))
-  (define destination (destination-path data-dir candidate))
-  (set-box! last-progress-seconds (current-seconds))
-  (define worker-thread
-    (thread
-     (lambda ()
-       ;; The watchdog breaks a stalled worker; exn:break is not an
-       ;; exn:fail, so it needs its own arm — either way rivet's partial
-       ;; cleanup removes the .partial and the phase lands on error
-       ;; (never mid-flight).
-       (with-handlers
-           ([(lambda (e) (or (exn:fail? e) (exn:break? e)))
-             (lambda (e)
-               (state-set! 'phase "error")
-               (state-set! 'message
-                           (if (exn:break? e)
-                               "update download stalled or timed out"
-                               (exn-message e))))])
-         (define path
-           (download-with-progress! config candidate destination))
-         (state-set! 'phase "downloaded")
-         (state-set! 'percent 100)
-         (state-set! 'downloadedPath (path->string path))))))
-  (set-box! worker-thread-box worker-thread)
-  ;; Watchdog: exits once the worker finishes on its own; otherwise a stall
-  ;; (no byte progress) or the total wall-clock limit breaks the worker so
-  ;; phase never rests on "downloading" indefinitely.
-  (define download-started (current-seconds))
-  (thread
-   (lambda ()
-     (let loop ()
-       (cond
-         [(sync/timeout download-stall-limit-seconds
-                        (thread-dead-evt worker-thread))
-          (void)]
-         [(> (- (current-seconds) (unbox last-progress-seconds))
-             download-stall-limit-seconds)
-          (break-thread worker-thread)]
-         [(> (- (current-seconds) download-started)
-             download-total-limit-seconds)
-          (break-thread worker-thread)]
-         [else (loop)]))))
-  (void))
+  (set-box! download-root-box data-dir)
+  (updater-download! instance))
