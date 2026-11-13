@@ -16,7 +16,7 @@ concurrency:
 # Single source of truth for the rivet pin; every install step below
 # references this so a bump is one edit, not a grep-replace across jobs.
 env:
-  RIVET_PIN: 8db939999ded6bde9696fbc420730a9f86901c77
+  RIVET_PIN: dc448e069b95c41dde60d56330884ace48432ce5
 jobs:
   validate:
     name: Validate release tag
@@ -232,7 +232,7 @@ jobs:
       - name: Set up embeddable Racket CS
         # Literal pin: `uses:` does not expand env, so this cannot read
         # RIVET_PIN — bump it in tandem with RIVET_PIN (top of file).
-        uses: turlamai/rivet/.github/actions/setup-embed-racket@8db939999ded6bde9696fbc420730a9f86901c77
+        uses: turlamai/rivet/.github/actions/setup-embed-racket@dc448e069b95c41dde60d56330884ace48432ce5
       - name: Install Rivet (catalog)
         run: raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#${{ env.RIVET_PIN }}'
       - name: Install GTK toolchain + packaging tools

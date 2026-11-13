@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- The updater delegates its authenticated check/download state machine to
+  `rivet/distribution`'s `make-updater`: Payback keeps its key, feed
+  settings, `'app` component selection, and staging path, while candidate
+  selection, progress, the stall/total watchdog, cancellation, and terminal
+  state are shared. `app/updater.rkt` drops the duplicate worker/watchdog
+  machinery; the wire `update-state` shape is unchanged.
+
 ## [1.12.0] - 2026-10-29
 
 This round came out of testing the shipped product on real desktops:
