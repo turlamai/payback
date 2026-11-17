@@ -898,5 +898,129 @@
   "retrySave": {
     "zh": "重试保存",
     "en": "Retry save"
+  },
+  "companionSection": {
+    "zh": "移动端伴随",
+    "en": "Mobile companion"
+  },
+  "companionEnable": {
+    "zh": "允许移动端连接",
+    "en": "Allow mobile connections"
+  },
+  "companionEnableHelp": {
+    "zh": "在本地网络开启伴随通道；手机与本机配对后可读取和编辑同一份数据。默认关闭。",
+    "en": "Runs the companion channel on your local network. A paired phone reads and edits the same data. Off by default."
+  },
+  "companionStatusOn": {
+    "zh": "伴随通道运行中",
+    "en": "Companion channel running"
+  },
+  "companionStatusOff": {
+    "zh": "伴随通道已关闭",
+    "en": "Companion channel off"
+  },
+  "companionOpenWindow": {
+    "zh": "打开配对窗口",
+    "en": "Open pairing window"
+  },
+  "companionWindowHint": {
+    "zh": "配对窗口五分钟后关闭。",
+    "en": "The pairing window closes after five minutes."
+  },
+  "companionPromptTitle": {
+    "zh": "手机配对请求",
+    "en": "Phone pairing request"
+  },
+  "companionPromptBody": {
+    "zh": "在手机上确认同一个六位码，两侧一致才批准。",
+    "en": "Confirm the same six-digit code on the phone. Approve only if both screens match."
+  },
+  "companionApprove": {
+    "zh": "批准",
+    "en": "Approve"
+  },
+  "companionReject": {
+    "zh": "拒绝",
+    "en": "Reject"
+  },
+  "companionPairedLabel": {
+    "zh": "已配对设备",
+    "en": "Paired devices"
+  },
+  "companionRemove": {
+    "zh": "移除",
+    "en": "Remove"
+  },
+  "companionEmptyPaired": {
+    "zh": "还没有已配对的移动设备。",
+    "en": "No paired mobile devices yet."
+  },
+  "companionFingerprint": {
+    "zh": "服务器指纹",
+    "en": "Server fingerprint"
+  },
+  "companionFailed": {
+    "zh": "伴随通道出错",
+    "en": "Companion channel error"
+  },
+  "companionIdle": {
+    "zh": "未连接桌面端",
+    "en": "Desktop not connected"
+  },
+  "companionConnecting": {
+    "zh": "正在安全连接…",
+    "en": "Connecting securely…"
+  },
+  "companionConfirmCode": {
+    "zh": "请确认配对码",
+    "en": "Confirm the pairing code"
+  },
+  "companionConnected": {
+    "zh": "已建立安全会话",
+    "en": "Secure session established"
+  },
+  "companionSessionHeader": {
+    "zh": "连接状态",
+    "en": "Connection"
+  },
+  "companionDisconnect": {
+    "zh": "断开",
+    "en": "Disconnect"
+  },
+  "companionNearby": {
+    "zh": "附近的桌面端",
+    "en": "Nearby desktops"
+  },
+  "companionStopScan": {
+    "zh": "停止扫描",
+    "en": "Stop scanning"
+  },
+  "companionScan": {
+    "zh": "扫描桌面端",
+    "en": "Scan for desktops"
+  },
+  "companionNoDevices": {
+    "zh": "还没有发现桌面端。请确认桌面端已开启伴随通道，并处于同一网络。",
+    "en": "No desktops found yet. Make sure the desktop companion channel is on and both devices share a network."
+  },
+  "companionWindowOpen": {
+    "zh": "配对窗口已打开",
+    "en": "Pairing window open"
+  },
+  "companionWindowClosed": {
+    "zh": "配对窗口未打开",
+    "en": "Pairing window closed"
+  },
+  "companionWindowIDField": {
+    "zh": "配对窗口 ID（桌面端设置里复制）",
+    "en": "Pairing window ID (copy from desktop settings)"
+  },
+  "companionPair": {
+    "zh": "配对",
+    "en": "Pair"
+  },
+  "companionReconnect": {
+    "zh": "重新连接",
+    "en": "Reconnect"
   }
 }

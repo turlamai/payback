@@ -245,6 +245,37 @@ struct Strings {
   std::wstring save_device_button() const { return zh ? L"保存设备" : L"Save device"; }
   std::wstring saving_short() const { return zh ? L"正在保存…" : L"Saving…"; }
   std::wstring retry_save() const { return zh ? L"重试保存" : L"Retry save"; }
+  std::wstring companion_section() const { return zh ? L"移动端伴随" : L"Mobile companion"; }
+  std::wstring companion_enable() const { return zh ? L"允许移动端连接" : L"Allow mobile connections"; }
+  std::wstring companion_enable_help() const { return zh ? L"在本地网络开启伴随通道；手机与本机配对后可读取和编辑同一份数据。默认关闭。" : L"Runs the companion channel on your local network. A paired phone reads and edits the same data. Off by default."; }
+  std::wstring companion_status_on() const { return zh ? L"伴随通道运行中" : L"Companion channel running"; }
+  std::wstring companion_status_off() const { return zh ? L"伴随通道已关闭" : L"Companion channel off"; }
+  std::wstring companion_open_window() const { return zh ? L"打开配对窗口" : L"Open pairing window"; }
+  std::wstring companion_window_hint() const { return zh ? L"配对窗口五分钟后关闭。" : L"The pairing window closes after five minutes."; }
+  std::wstring companion_prompt_title() const { return zh ? L"手机配对请求" : L"Phone pairing request"; }
+  std::wstring companion_prompt_body() const { return zh ? L"在手机上确认同一个六位码，两侧一致才批准。" : L"Confirm the same six-digit code on the phone. Approve only if both screens match."; }
+  std::wstring companion_approve() const { return zh ? L"批准" : L"Approve"; }
+  std::wstring companion_reject() const { return zh ? L"拒绝" : L"Reject"; }
+  std::wstring companion_paired_label() const { return zh ? L"已配对设备" : L"Paired devices"; }
+  std::wstring companion_remove() const { return zh ? L"移除" : L"Remove"; }
+  std::wstring companion_empty_paired() const { return zh ? L"还没有已配对的移动设备。" : L"No paired mobile devices yet."; }
+  std::wstring companion_fingerprint() const { return zh ? L"服务器指纹" : L"Server fingerprint"; }
+  std::wstring companion_failed() const { return zh ? L"伴随通道出错" : L"Companion channel error"; }
+  std::wstring companion_idle() const { return zh ? L"未连接桌面端" : L"Desktop not connected"; }
+  std::wstring companion_connecting() const { return zh ? L"正在安全连接…" : L"Connecting securely…"; }
+  std::wstring companion_confirm_code() const { return zh ? L"请确认配对码" : L"Confirm the pairing code"; }
+  std::wstring companion_connected() const { return zh ? L"已建立安全会话" : L"Secure session established"; }
+  std::wstring companion_session_header() const { return zh ? L"连接状态" : L"Connection"; }
+  std::wstring companion_disconnect() const { return zh ? L"断开" : L"Disconnect"; }
+  std::wstring companion_nearby() const { return zh ? L"附近的桌面端" : L"Nearby desktops"; }
+  std::wstring companion_stop_scan() const { return zh ? L"停止扫描" : L"Stop scanning"; }
+  std::wstring companion_scan() const { return zh ? L"扫描桌面端" : L"Scan for desktops"; }
+  std::wstring companion_no_devices() const { return zh ? L"还没有发现桌面端。请确认桌面端已开启伴随通道，并处于同一网络。" : L"No desktops found yet. Make sure the desktop companion channel is on and both devices share a network."; }
+  std::wstring companion_window_open() const { return zh ? L"配对窗口已打开" : L"Pairing window open"; }
+  std::wstring companion_window_closed() const { return zh ? L"配对窗口未打开" : L"Pairing window closed"; }
+  std::wstring companion_window_i_d_field() const { return zh ? L"配对窗口 ID（桌面端设置里复制）" : L"Pairing window ID (copy from desktop settings)"; }
+  std::wstring companion_pair() const { return zh ? L"配对" : L"Pair"; }
+  std::wstring companion_reconnect() const { return zh ? L"重新连接" : L"Reconnect"; }
 };
 
 inline Strings const& strings() {

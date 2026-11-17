@@ -372,6 +372,10 @@ struct CelebrationPayload: Identifiable {
     private var backend: EmbeddedRacketBackend?
     private var pollTimer: Timer?
 
+    /// device-channel gateway binding (#63): the companion manager owns the
+    /// desktop listener; it plugs into the embedded backend on start
+    let companion = CompanionManager()
+
     var api: RivetAPI? {
         guard let backend else { return nil }
         return RivetAPI(client: backend.client)
@@ -394,6 +398,7 @@ struct CelebrationPayload: Identifiable {
                     Data("payback: backend started\n".utf8))
                 ready = true
                 status = ""
+                companion.attach(client: backend.client)
                 reload()
                 autoCheckForUpdates()
                 runDailyDigest()

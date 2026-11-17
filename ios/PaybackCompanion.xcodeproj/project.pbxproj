@@ -1,0 +1,474 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03B8E0C7FF82B7059FBF7B7E /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5789F04442716C699C05C200 /* LibraryView.swift */; };
+		091725934E8F7E3B18CADFD0 /* RivetDeviceAppleCompanion in Frameworks */ = {isa = PBXBuildFile; productRef = 2BFA6C1265516869636E6112 /* RivetDeviceAppleCompanion */; };
+		12BDC64B6913087C294653C7 /* PaybackCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764C105919CB8D4B6577BABA /* PaybackCompanionApp.swift */; };
+		181E2BE4FEC1DAEC7875B6AD /* DeviceRPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165233C2B02B6F1604B1B799 /* DeviceRPC.swift */; };
+		23FCA8A5F1181CC40C64048D /* RivetRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 64A3FD4C689329BFA00F4DA3 /* RivetRuntime */; };
+		43016ADA61589D3408C95327 /* RivetDeviceAppleCompanionUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5D13E5D6974AF21CDC59B827 /* RivetDeviceAppleCompanionUI */; };
+		457DC7E268D07BD31F8AABDB /* RivetDeviceAppleSecurity in Frameworks */ = {isa = PBXBuildFile; productRef = ADAE17C1665C26D5B6CE601E /* RivetDeviceAppleSecurity */; };
+		61BEBA7BDAC92C9EDC563EA1 /* GeneratedBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1233E28E4585E94DA2938131 /* GeneratedBackend.swift */; };
+		666A0E6432A3D00021295BFD /* PaybackTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD354C64EF92C823E6BD645 /* PaybackTheme.swift */; };
+		6C333D13D0A99CAF99B88F08 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12163F9D711374236DEFA00A /* RootView.swift */; };
+		9BF5CCD28DBCFB420D083D4A /* CompanionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CF17F246F741C430AA2240 /* CompanionSession.swift */; };
+		9CDDD2092AA35BF2F6957AB1 /* DeviceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56ED7B2D25BA984885E502B2 /* DeviceDetailView.swift */; };
+		9D12D550709226DBCB64F170 /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5CD63DD29A73E254B852A4F /* ConnectView.swift */; };
+		ABE45C8AED5A39CE5484D6A4 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346373A1E8521DBDD6EB8A00 /* L10n.swift */; };
+		B07EA4BD8C1BAC916B9A8B74 /* RivetDeviceSession in Frameworks */ = {isa = PBXBuildFile; productRef = E0C4C32E252CCFCEE0D8E9EF /* RivetDeviceSession */; };
+		B3C561CF4B1F60B0E2C97260 /* RivetDeviceAppleTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6EAC5B5C6BD9418B42DAF5E8 /* RivetDeviceAppleTransport */; };
+		D068010321642758222C27FC /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BFDBFB37B281C2DEBDD6033 /* Money.swift */; };
+		E9D6292F17791552FC82A6BA /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47DADDDC964E0523A157330 /* Models.swift */; };
+		F5BCB0219724C086D5124DE0 /* RivetDevice in Frameworks */ = {isa = PBXBuildFile; productRef = 9E393AA7EA562D455702259A /* RivetDevice */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0BD354C64EF92C823E6BD645 /* PaybackTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaybackTheme.swift; sourceTree = "<group>"; };
+		0EC030AE29D8B4785D31805E /* PaybackCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PaybackCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		12163F9D711374236DEFA00A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		1233E28E4585E94DA2938131 /* GeneratedBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedBackend.swift; sourceTree = "<group>"; };
+		165233C2B02B6F1604B1B799 /* DeviceRPC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRPC.swift; sourceTree = "<group>"; };
+		346373A1E8521DBDD6EB8A00 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		3BFDBFB37B281C2DEBDD6033 /* Money.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Money.swift; sourceTree = "<group>"; };
+		555FE61798D2641AC5735FA8 /* rivet */ = {isa = PBXFileReference; lastKnownFileType = folder; name = rivet; path = ../../rivet; sourceTree = SOURCE_ROOT; };
+		56ED7B2D25BA984885E502B2 /* DeviceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailView.swift; sourceTree = "<group>"; };
+		5789F04442716C699C05C200 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		764C105919CB8D4B6577BABA /* PaybackCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaybackCompanionApp.swift; sourceTree = "<group>"; };
+		A5CF17F246F741C430AA2240 /* CompanionSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSession.swift; sourceTree = "<group>"; };
+		D5CD63DD29A73E254B852A4F /* ConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectView.swift; sourceTree = "<group>"; };
+		DADEC08B16974C41EB459119 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F47DADDDC964E0523A157330 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DE7F4A188F5F184C4425FB64 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23FCA8A5F1181CC40C64048D /* RivetRuntime in Frameworks */,
+				F5BCB0219724C086D5124DE0 /* RivetDevice in Frameworks */,
+				B07EA4BD8C1BAC916B9A8B74 /* RivetDeviceSession in Frameworks */,
+				457DC7E268D07BD31F8AABDB /* RivetDeviceAppleSecurity in Frameworks */,
+				B3C561CF4B1F60B0E2C97260 /* RivetDeviceAppleTransport in Frameworks */,
+				091725934E8F7E3B18CADFD0 /* RivetDeviceAppleCompanion in Frameworks */,
+				43016ADA61589D3408C95327 /* RivetDeviceAppleCompanionUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2E3EF5275423A68567AFB8AD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0EC030AE29D8B4785D31805E /* PaybackCompanion.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4511C222C474080EBE319310 /* PaybackCompanion */ = {
+			isa = PBXGroup;
+			children = (
+				DADEC08B16974C41EB459119 /* Info.plist */,
+				764C105919CB8D4B6577BABA /* PaybackCompanionApp.swift */,
+				483139E4DD46F31F6C2EBF55 /* Support */,
+				638B53A121E60D5460345190 /* Views */,
+			);
+			path = PaybackCompanion;
+			sourceTree = "<group>";
+		};
+		483139E4DD46F31F6C2EBF55 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				A5CF17F246F741C430AA2240 /* CompanionSession.swift */,
+				165233C2B02B6F1604B1B799 /* DeviceRPC.swift */,
+				0BD354C64EF92C823E6BD645 /* PaybackTheme.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		638B53A121E60D5460345190 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D5CD63DD29A73E254B852A4F /* ConnectView.swift */,
+				56ED7B2D25BA984885E502B2 /* DeviceDetailView.swift */,
+				5789F04442716C699C05C200 /* LibraryView.swift */,
+				12163F9D711374236DEFA00A /* RootView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		7370434A910113083E425442 /* RivetHost */ = {
+			isa = PBXGroup;
+			children = (
+				1233E28E4585E94DA2938131 /* GeneratedBackend.swift */,
+				346373A1E8521DBDD6EB8A00 /* L10n.swift */,
+				F47DADDDC964E0523A157330 /* Models.swift */,
+				3BFDBFB37B281C2DEBDD6033 /* Money.swift */,
+			);
+			path = RivetHost;
+			sourceTree = "<group>";
+		};
+		876B7B8277667ED378160529 /* payback */ = {
+			isa = PBXGroup;
+			children = (
+				C62FB1B40B7EE687FB4573BB /* macos-host */,
+			);
+			name = payback;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		8E73C2F4E6BB052EE2657EFC /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				555FE61798D2641AC5735FA8 /* rivet */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		A8D12D32E4E2636D42F53D8D /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				7370434A910113083E425442 /* RivetHost */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		C127A128DBB85F6A67F59B01 = {
+			isa = PBXGroup;
+			children = (
+				8E73C2F4E6BB052EE2657EFC /* Packages */,
+				876B7B8277667ED378160529 /* payback */,
+				4511C222C474080EBE319310 /* PaybackCompanion */,
+				2E3EF5275423A68567AFB8AD /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C62FB1B40B7EE687FB4573BB /* macos-host */ = {
+			isa = PBXGroup;
+			children = (
+				A8D12D32E4E2636D42F53D8D /* Sources */,
+			);
+			path = "macos-host";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		81D2FB4562F404A7C12EC8E8 /* PaybackCompanion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 833D3884628A75C69F61BC5B /* Build configuration list for PBXNativeTarget "PaybackCompanion" */;
+			buildPhases = (
+				CE55C3C12FE9CEB4C3F0D797 /* Sources */,
+				DE7F4A188F5F184C4425FB64 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PaybackCompanion;
+			packageProductDependencies = (
+				64A3FD4C689329BFA00F4DA3 /* RivetRuntime */,
+				9E393AA7EA562D455702259A /* RivetDevice */,
+				E0C4C32E252CCFCEE0D8E9EF /* RivetDeviceSession */,
+				ADAE17C1665C26D5B6CE601E /* RivetDeviceAppleSecurity */,
+				6EAC5B5C6BD9418B42DAF5E8 /* RivetDeviceAppleTransport */,
+				2BFA6C1265516869636E6112 /* RivetDeviceAppleCompanion */,
+				5D13E5D6974AF21CDC59B827 /* RivetDeviceAppleCompanionUI */,
+			);
+			productName = PaybackCompanion;
+			productReference = 0EC030AE29D8B4785D31805E /* PaybackCompanion.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CEC17413B153C04CB7FAB415 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					81D2FB4562F404A7C12EC8E8 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 6DC004A45A5F3D0216B40F56 /* Build configuration list for PBXProject "PaybackCompanion" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C127A128DBB85F6A67F59B01;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F7B1567583F238F4D5A3A8DB /* XCLocalSwiftPackageReference "../../rivet" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2E3EF5275423A68567AFB8AD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				81D2FB4562F404A7C12EC8E8 /* PaybackCompanion */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CE55C3C12FE9CEB4C3F0D797 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9BF5CCD28DBCFB420D083D4A /* CompanionSession.swift in Sources */,
+				9D12D550709226DBCB64F170 /* ConnectView.swift in Sources */,
+				9CDDD2092AA35BF2F6957AB1 /* DeviceDetailView.swift in Sources */,
+				181E2BE4FEC1DAEC7875B6AD /* DeviceRPC.swift in Sources */,
+				61BEBA7BDAC92C9EDC563EA1 /* GeneratedBackend.swift in Sources */,
+				ABE45C8AED5A39CE5484D6A4 /* L10n.swift in Sources */,
+				03B8E0C7FF82B7059FBF7B7E /* LibraryView.swift in Sources */,
+				E9D6292F17791552FC82A6BA /* Models.swift in Sources */,
+				D068010321642758222C27FC /* Money.swift in Sources */,
+				12BDC64B6913087C294653C7 /* PaybackCompanionApp.swift in Sources */,
+				666A0E6432A3D00021295BFD /* PaybackTheme.swift in Sources */,
+				6C333D13D0A99CAF99B88F08 /* RootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		223C5F053F56E1F5B5C28AAB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = PaybackCompanion/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = site.jrtx.payback.companion;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		4BD9ECD86B7A2478D5B5CCE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = PaybackCompanion/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = site.jrtx.payback.companion;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8C73138FC939FA2F097548FB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A17C8D4B5EE0759B85B4D1EB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6DC004A45A5F3D0216B40F56 /* Build configuration list for PBXProject "PaybackCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A17C8D4B5EE0759B85B4D1EB /* Debug */,
+				8C73138FC939FA2F097548FB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		833D3884628A75C69F61BC5B /* Build configuration list for PBXNativeTarget "PaybackCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4BD9ECD86B7A2478D5B5CCE4 /* Debug */,
+				223C5F053F56E1F5B5C28AAB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F7B1567583F238F4D5A3A8DB /* XCLocalSwiftPackageReference "../../rivet" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../rivet;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2BFA6C1265516869636E6112 /* RivetDeviceAppleCompanion */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RivetDeviceAppleCompanion;
+		};
+		5D13E5D6974AF21CDC59B827 /* RivetDeviceAppleCompanionUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RivetDeviceAppleCompanionUI;
+		};
+		64A3FD4C689329BFA00F4DA3 /* RivetRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RivetRuntime;
+		};
+		6EAC5B5C6BD9418B42DAF5E8 /* RivetDeviceAppleTransport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RivetDeviceAppleTransport;
+		};
+		9E393AA7EA562D455702259A /* RivetDevice */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RivetDevice;
+		};
+		ADAE17C1665C26D5B6CE601E /* RivetDeviceAppleSecurity */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RivetDeviceAppleSecurity;
+		};
+		E0C4C32E252CCFCEE0D8E9EF /* RivetDeviceSession */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RivetDeviceSession;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CEC17413B153C04CB7FAB415 /* Project object */;
+}

@@ -26,3 +26,4 @@ macos-host/.build/
 /*.dmg
 /*.zip
 /*.sha256
+ios/build/

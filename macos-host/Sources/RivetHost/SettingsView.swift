@@ -21,6 +21,7 @@ struct SettingsView: View {
         Form {
             languageSection
             dataSection
+            companionSection
             aboutSection
         }
         .formStyle(.grouped)
@@ -312,6 +313,149 @@ struct SettingsView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    // MARK: 移动端伴随（issue #63, docs/network-device-channel.md）
+
+    private var companionSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(L10n.t(.companionEnable), isOn: companionBinding)
+                Text(L10n.t(.companionEnableHelp))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 2)
+
+            if model.companion.enabled {
+                HStack {
+                    Label(L10n.t(.companionStatusOn), systemImage: "iphone.radiowaves.left.and.right")
+                        .foregroundStyle(PaybackTheme.earn)
+                    Spacer()
+                    if model.companion.activeSessionCount > 0 {
+                        Text("\(model.companion.activeSessionCount)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if let fingerprint = model.companion.fingerprintHex {
+                    LabeledContent(L10n.t(.companionFingerprint)) {
+                        Text(String(fingerprint.prefix(16)) + "…")
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                pairingRow
+            } else {
+                Label(L10n.t(.companionStatusOff), systemImage: "iphone.slash")
+                    .foregroundStyle(.secondary)
+            }
+
+            if let error = model.companion.lastError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(PaybackTheme.danger)
+            }
+        } header: {
+            Text(L10n.t(.companionSection))
+        }
+        .onAppear {
+            Task { await model.companion.refreshPairedDevices() }
+        }
+    }
+
+    private var companionBinding: Binding<Bool> {
+        Binding(get: { model.companion.enabled },
+                set: { model.companion.setEnabled($0) })
+    }
+
+    @ViewBuilder
+    private var pairingRow: some View {
+        if let prompt = model.companion.pairingPrompt {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.t(.companionPromptTitle))
+                    .font(.callout.weight(.semibold))
+                Text(prompt.code)
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Text(L10n.t(.companionPromptBody))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button(L10n.t(.companionReject), role: .destructive) {
+                        model.companion.approvePairing(false)
+                    }
+                    Spacer()
+                    Button(L10n.t(.companionApprove)) {
+                        model.companion.approvePairing(true)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(PaybackTheme.earn)
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: PaybackTheme.statCorner, style: .continuous)
+                    .fill(PaybackTheme.soft)
+            )
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Button {
+                        model.companion.openPairingWindow()
+                    } label: {
+                        Label(L10n.t(.companionOpenWindow), systemImage: "plus.circle")
+                    }
+                    .disabled(model.companion.pairingWindowOpen)
+                    Spacer()
+                }
+                if model.companion.pairingWindowOpen {
+                    Text(L10n.t(.companionWindowHint))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    // the QR flow is designed but not built; until then the
+                    // phone pairs by pasting this window ID (declared UX
+                    // delta, issue #63)
+                    if let windowID = model.companion.activeWindowID {
+                        Text(windowID.uuidString)
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .foregroundStyle(PaybackTheme.muted)
+                    }
+                }
+            }
+            pairedDevicesList
+        }
+    }
+
+    @ViewBuilder
+    private var pairedDevicesList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.t(.companionPairedLabel))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if model.companion.pairedDevices.isEmpty {
+                Text(L10n.t(.companionEmptyPaired))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            ForEach(model.companion.pairedDevices, id: \.id) { device in
+                HStack(spacing: 8) {
+                    Image(systemName: "iphone")
+                        .foregroundStyle(.secondary)
+                    Text(device.name)
+                        .font(.callout)
+                    Spacer()
+                    Button(L10n.t(.companionRemove), role: .destructive) {
+                        model.companion.removePairedDevice(device)
+                    }
+                    .controlSize(.small)
+                }
+            }
+        }
+        .padding(.top, 4)
     }
 
     // MARK: 关于

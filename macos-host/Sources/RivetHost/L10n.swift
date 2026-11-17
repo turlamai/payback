@@ -249,6 +249,37 @@ enum L10n {
         case saveDeviceButton
         case savingShort
         case retrySave
+        case companionSection
+        case companionEnable
+        case companionEnableHelp
+        case companionStatusOn
+        case companionStatusOff
+        case companionOpenWindow
+        case companionWindowHint
+        case companionPromptTitle
+        case companionPromptBody
+        case companionApprove
+        case companionReject
+        case companionPairedLabel
+        case companionRemove
+        case companionEmptyPaired
+        case companionFingerprint
+        case companionFailed
+        case companionIdle
+        case companionConnecting
+        case companionConfirmCode
+        case companionConnected
+        case companionSessionHeader
+        case companionDisconnect
+        case companionNearby
+        case companionStopScan
+        case companionScan
+        case companionNoDevices
+        case companionWindowOpen
+        case companionWindowClosed
+        case companionWindowIDField
+        case companionPair
+        case companionReconnect
 
         var zh: String {
             switch self {
@@ -477,6 +508,37 @@ enum L10n {
             case .saveDeviceButton: return "保存设备"
             case .savingShort: return "正在保存…"
             case .retrySave: return "重试保存"
+            case .companionSection: return "移动端伴随"
+            case .companionEnable: return "允许移动端连接"
+            case .companionEnableHelp: return "在本地网络开启伴随通道；手机与本机配对后可读取和编辑同一份数据。默认关闭。"
+            case .companionStatusOn: return "伴随通道运行中"
+            case .companionStatusOff: return "伴随通道已关闭"
+            case .companionOpenWindow: return "打开配对窗口"
+            case .companionWindowHint: return "配对窗口五分钟后关闭。"
+            case .companionPromptTitle: return "手机配对请求"
+            case .companionPromptBody: return "在手机上确认同一个六位码，两侧一致才批准。"
+            case .companionApprove: return "批准"
+            case .companionReject: return "拒绝"
+            case .companionPairedLabel: return "已配对设备"
+            case .companionRemove: return "移除"
+            case .companionEmptyPaired: return "还没有已配对的移动设备。"
+            case .companionFingerprint: return "服务器指纹"
+            case .companionFailed: return "伴随通道出错"
+            case .companionIdle: return "未连接桌面端"
+            case .companionConnecting: return "正在安全连接…"
+            case .companionConfirmCode: return "请确认配对码"
+            case .companionConnected: return "已建立安全会话"
+            case .companionSessionHeader: return "连接状态"
+            case .companionDisconnect: return "断开"
+            case .companionNearby: return "附近的桌面端"
+            case .companionStopScan: return "停止扫描"
+            case .companionScan: return "扫描桌面端"
+            case .companionNoDevices: return "还没有发现桌面端。请确认桌面端已开启伴随通道，并处于同一网络。"
+            case .companionWindowOpen: return "配对窗口已打开"
+            case .companionWindowClosed: return "配对窗口未打开"
+            case .companionWindowIDField: return "配对窗口 ID（桌面端设置里复制）"
+            case .companionPair: return "配对"
+            case .companionReconnect: return "重新连接"
             }
         }
 
@@ -707,6 +769,37 @@ enum L10n {
             case .saveDeviceButton: return "Save device"
             case .savingShort: return "Saving…"
             case .retrySave: return "Retry save"
+            case .companionSection: return "Mobile companion"
+            case .companionEnable: return "Allow mobile connections"
+            case .companionEnableHelp: return "Runs the companion channel on your local network. A paired phone reads and edits the same data. Off by default."
+            case .companionStatusOn: return "Companion channel running"
+            case .companionStatusOff: return "Companion channel off"
+            case .companionOpenWindow: return "Open pairing window"
+            case .companionWindowHint: return "The pairing window closes after five minutes."
+            case .companionPromptTitle: return "Phone pairing request"
+            case .companionPromptBody: return "Confirm the same six-digit code on the phone. Approve only if both screens match."
+            case .companionApprove: return "Approve"
+            case .companionReject: return "Reject"
+            case .companionPairedLabel: return "Paired devices"
+            case .companionRemove: return "Remove"
+            case .companionEmptyPaired: return "No paired mobile devices yet."
+            case .companionFingerprint: return "Server fingerprint"
+            case .companionFailed: return "Companion channel error"
+            case .companionIdle: return "Desktop not connected"
+            case .companionConnecting: return "Connecting securely…"
+            case .companionConfirmCode: return "Confirm the pairing code"
+            case .companionConnected: return "Secure session established"
+            case .companionSessionHeader: return "Connection"
+            case .companionDisconnect: return "Disconnect"
+            case .companionNearby: return "Nearby desktops"
+            case .companionStopScan: return "Stop scanning"
+            case .companionScan: return "Scan for desktops"
+            case .companionNoDevices: return "No desktops found yet. Make sure the desktop companion channel is on and both devices share a network."
+            case .companionWindowOpen: return "Pairing window open"
+            case .companionWindowClosed: return "Pairing window closed"
+            case .companionWindowIDField: return "Pairing window ID (copy from desktop settings)"
+            case .companionPair: return "Pair"
+            case .companionReconnect: return "Reconnect"
             }
         }
     }
