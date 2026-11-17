@@ -77,7 +77,8 @@
          (define-values (ry rm rd) (civil-from-days (days-from-civil y m d)))
          (and (= ry y) (= rm m) (= rd d)))))
 
-(define min-date-string "1990-01-01")
+;; design/DESIGN.md (2026-11 redesign): purchases back to 1900 are valid
+(define min-date-string "1900-01-01")
 
 ;; purchase dates may not lie in the future relative to `today`
 (define (valid-date-range? s today)

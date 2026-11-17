@@ -40,6 +40,8 @@
          sync-machine-id
          sync-mutate!
          sync-claim-setting!
+         sync-refresh-local-settings!
+         sync-restore-backup!
          sync-configure!
          sync-rename-machine!
          sync-refresh-if-changed!
@@ -182,6 +184,18 @@
             (cond [(string=? (car ka) (car kb))
                    (string<? (cdr ka) (cdr kb))]
                   [else (string<? (car ka) (car kb))]))))
+  ;; tombstoned winners are the "recently deleted" list: newest deletion
+  ;; first, ties broken by id so every machine lists identically
+  (define trash
+    (sort (for/list ([d (in-hash-values device-winners)]
+                     #:when (tombstoned? d))
+            d)
+          (λ (a b)
+            (cond
+              [(string=? (hash-ref a 'deletedAt) (hash-ref b 'deletedAt))
+               (string<? (hash-ref a 'id) (hash-ref b 'id))]
+              [else (string>? (hash-ref a 'deletedAt)
+                              (hash-ref b 'deletedAt))]))))
   (define setting-winners
     (for/fold ([acc (hasheq)])
               ([shard (in-list shards)])
@@ -207,6 +221,7 @@
       #:key (λ (m) (hash-ref m 'id)))
      string<? #:key (λ (m) (hash-ref m 'id))))
   (hasheq 'devices live
+          'trash trash
           'settings setting-winners
           'machines machines
           'knownIds (sort (hash-keys device-winners) string<?)))
@@ -463,6 +478,7 @@
       (hash-set acc key (hash-ref wrapper 'value))))
   (hasheq 'version 1
           'devices (hash-ref merged 'devices)
+          'trash (hash-ref merged 'trash '())
           'settings settings
           'knownIds (hash-ref merged 'knownIds)))
 
@@ -524,6 +540,18 @@
            (write-own-shard! engine #:claims next)
            (set-box! (sync-engine-claims-box engine) next)
            (refresh!/sema engine)]
+          ;; bulk claim (backup restore): one shard write and one refresh
+          ;; for the whole set, same commit-on-disk-first ordering
+          [(devices)
+           (define next
+             (for/fold ([claims (unbox (sync-engine-claims-box engine))])
+                       ([record (in-list (cadr change))])
+               (hash-set claims
+                         (hash-ref record 'id)
+                         (normalize-claim record))))
+           (write-own-shard! engine #:claims next)
+           (set-box! (sync-engine-claims-box engine) next)
+           (refresh!/sema engine)]
           [(setting)
            (define wrapper (caddr change))
            ;; same commit-on-disk-first ordering as the device branch (#24)
@@ -548,6 +576,87 @@
             'updatedAt (now-timestamp)
             'editedBy (car (unbox (sync-engine-machine-box engine)))))
   (sync-mutate! engine (λ (_doc) (values (list 'setting key wrapper) wrapper))))
+
+;; Rebuilds the cached view after a caller wrote the local document
+;; directly (save-settings' per-machine keys): the view merge layers local
+;; settings under synced claims, so the cache would otherwise serve stale
+;; values until the next unrelated refresh. No revision bump — the caller
+;; already holds the fresh payload, and nothing in the active directory
+;; changed.
+(define (sync-refresh-local-settings! engine)
+  (call-with-semaphore (sync-engine-sema engine)
+    (lambda () (refresh!/sema engine #:bump-revision? #f))))
+
+;; ---------- backup restore ----------
+
+;; Applies a validated backup (docs/data-format.md "payback.backup") as one
+;; engine-level operation: every backup record is claimed with a fresh
+;; updatedAt so the LWW beats other machines' claims, every current live
+;; device the backup lacks is tombstoned (recoverable — it becomes trash),
+;; the currency preference is claimed, and theme/language land in the local
+;; document. The shard is written once and the view refreshes once; a
+;; failed write leaves memory equal to disk, like every mutation here.
+;;
+;; Tombstones of current records absent from the backup are left untouched:
+;; a sync-safe "replace" cannot un-delete records other machines still
+;; carry, so they simply stay restorable in the trash list (declared delta
+;; in #57).
+(define (sync-restore-backup! engine devices trash preferences)
+  (call-with-semaphore (sync-engine-sema engine)
+    (lambda ()
+      ;; re-merge first so the decision below sees the directory as it is
+      ;; right now, not as the last poll left it
+      (refresh!/sema engine #:bump-revision? #f)
+      (define now (now-timestamp))
+      (define me (sync-machine-id engine))
+      (define backup-ids
+        (for/hash ([d (in-list (append devices trash))])
+          (values (hash-ref d 'id) #t)))
+      ;; the claim set as it should be after the restore: backup devices
+      ;; live again, backup trash entries keep their tombstone, and every
+      ;; current live device the backup lacks is tombstoned (recoverable).
+      ;; Built immutably — the claims box only ever holds immutable hashes.
+      (define next-claims
+        (for/fold ([claims (unbox (sync-engine-claims-box engine))])
+                  ([entry (in-list
+                           (append
+                            (for/list ([d (in-list devices)])
+                              (cons d 'null))
+                            (for/list ([d (in-list trash)])
+                              (cons d (hash-ref d 'deletedAt now)))
+                            (for/list ([d (in-list
+                                           (hash-ref (sync-view engine)
+                                                     'devices))]
+                                       #:unless (hash-has-key? backup-ids
+                                                               (hash-ref d 'id)))
+                              (cons d now))))])
+          (define record (car entry))
+          (define deleted-at (cdr entry))
+          (hash-set claims
+                    (hash-ref record 'id)
+                    (normalize-claim
+                     (hash-set* record
+                                'updatedAt now
+                                'editedBy me
+                                'deletedAt deleted-at)))))
+      (define setting-claims
+        (hash-set (unbox (sync-engine-setting-claims-box engine))
+                  'currency
+                  (hasheq 'value (hash-ref preferences 'currency)
+                          'updatedAt now
+                          'editedBy me)))
+      (write-own-shard! engine #:claims next-claims #:settings setting-claims)
+      (set-box! (sync-engine-claims-box engine) next-claims)
+      (set-box! (sync-engine-setting-claims-box engine) setting-claims)
+      (persist-local! engine
+        (lambda (ldoc)
+          (hash-set ldoc 'settings
+                    (hash-set* (hash-ref ldoc 'settings)
+                               'theme (hash-ref preferences 'theme)
+                               'language (hash-ref preferences 'language)))))
+      (refresh!/sema engine)
+      (hasheq 'devices (length (hash-ref (sync-view engine) 'devices))
+              'trash (length (hash-ref (sync-view engine) 'trash))))))
 
 ;; ---------- configuration ----------
 

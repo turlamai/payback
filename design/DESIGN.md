@@ -168,3 +168,20 @@ const result = window.paybackAgent.commit(preview.data.token);
 ## Prototype source checkpoint — 2026-11-15
 
 `index.html` opens the primary prototype directly. Screen-directory launchers have been removed. All local scripts, styles and referenced assets needed by this checkpoint are versioned under this directory; OpenDesign metadata is excluded. This is an editable prototype checkpoint, not a claim that the native product or external services implement these interactions.
+
+## 原生实现映射（2026-11-18 声明，#57）
+
+原型是设计契约；存储词汇以 `docs/data-format.md` 为准，两处的对齐规则如下：
+
+- **分类**：引擎存 10 个分类值；宿主表单只列原型的 7 个展示项，映射
+  `keyboard→accessory`、`coffee→appliance`、`box→other`（标签按原型文案）。存量
+  `watch`/`camera`/`gaming` 记录在编辑表单中保留原值（带本地化标签），保存绝不静默改写。
+  图标一律线性线风格，与原型 `icons` 集合一致。
+- **术语**：全部 UI 文案弃用「已赚回/earned」表述；「回本」= 个人使用价值目标（英文
+  personal value goal / goal met）。引擎 wire 键名不变（存储名 ≠ 用户文案）。
+- **汇总区**：设备投入 + 合计每日成本 + 记录中的设备三项；静态说明行取代旧轮换 quip。
+- **原型外的保留面（已声明）**：更新检查/安装流程（家族基线）、里程碑庆祝浮层（引擎
+  ack-on-read 能力，按新 token 重绘）、每日快报通知（文案改为目标语义）。
+- **数据边界**：备份恢复后，当前多余墓碑保留在最近删除（同步安全语义，见
+  `docs/sync-design.md`）；原型里的浏览器自动化接口（`window.paybackAgent`）是原型专用，
+  原生产品的 CLI/MCP 面另行立项，不在本轮范围。

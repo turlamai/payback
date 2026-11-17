@@ -13,6 +13,7 @@
 
 (require json
          racket/file
+         racket/format
          racket/path
          racket/string
          rivet/backend
@@ -148,6 +149,7 @@
                          'channel (symbol->string app-channel))
            'settings (hash-ref (sync-view (the-sync)) 'settings)
            'devices marked-devices
+           'trashCount (length (hash-ref (sync-view (the-sync)) 'trash '()))
            'summary (portfolio-summary/computed marked-devices))))
 
 ;; once-per-day digest payload for the native "回本快报" notification
@@ -272,6 +274,99 @@
                    'deletedAt (now-timestamp)))
       (values (list 'device tombstone) (void)))))
 
+;; ---------- trash (recently deleted, docs/data-format.md) ----------
+
+;; Tombstoned winners with a computed block. There is no purge: records
+;; stay restorable until a backup restore replaces the library.
+(define-rpc (trash-list : Bytes)
+  (define today (today-string))
+  (define trash (hash-ref (sync-view (the-sync)) 'trash '()))
+  (jsexpr->bytes
+   (hasheq 'trash (for/list ([d (in-list trash)])
+                    (device-wire d today)))))
+
+(define-rpc (restore-device [id String] : Bytes)
+  (define today (today-string))
+  (define restored
+    (sync-mutate! (the-sync)
+      (lambda (doc)
+        (define existing
+          (or (for/first ([d (in-list (hash-ref doc 'trash '()))]
+                          #:when (string=? (hash-ref d 'id) id))
+                d)
+              (error 'restore-device "no deleted device: ~a" id)))
+        ;; clearing the tombstone with a fresh updatedAt wins the LWW and
+        ;; puts the original record — purchase details and goal included —
+        ;; back in the library
+        (define record
+          (hash-set* existing
+                     'updatedAt (now-timestamp)
+                     'editedBy (sync-machine-id (the-sync))
+                     'deletedAt 'null))
+        (values (list 'device record) record))))
+  (jsexpr->bytes (device-wire restored today)))
+
+;; ---------- backup (payback.backup v1, docs/data-format.md) ----------
+
+;; ISO-8601 UTC stamp for the backup envelope's `createdAt` (informational;
+;; validation ignores it so clocks never block a restore).
+(define (iso-8601-now)
+  (define d (seconds->date (current-seconds) #f))
+  (format "~a-~a-~aT~a:~a:~aZ"
+          (date-year d)
+          (~r (date-month d) #:min-width 2 #:pad-string "0")
+          (~r (date-day d) #:min-width 2 #:pad-string "0")
+          (~r (date-hour d) #:min-width 2 #:pad-string "0")
+          (~r (date-minute d) #:min-width 2 #:pad-string "0")
+          (~r (date-second d) #:min-width 2 #:pad-string "0")))
+
+;; The exported document carries the full stored records (metadata included)
+;; so a restore reproduces history, not a re-typed shadow of it.
+(define (backup-document)
+  (define view (sync-view (the-sync)))
+  (define settings (hash-ref view 'settings))
+  (hasheq 'schema "payback.backup"
+          'version 1
+          'createdAt (iso-8601-now)
+          'data (hasheq 'devices (hash-ref view 'devices)
+                        'trash (hash-ref view 'trash '())
+                        'preferences
+                        (hasheq 'currency (hash-ref settings 'currency "CNY")
+                                'theme (hash-ref settings 'theme "system")
+                                'language (hash-ref settings 'language "system")))))
+
+(define-rpc (backup-export : Bytes)
+  (sync-refresh-if-changed! (the-sync))
+  (jsexpr->bytes (backup-document)))
+
+;; The restore preview: full validation, no writes. Hosts show the counts
+;; and ask for explicit confirmation before calling backup-restore.
+(define-rpc (backup-validate [payload Bytes] : Bytes)
+  (define body (bytes->jsexpr payload))
+  (define today (today-string))
+  (define-values (_devices _trash preferences)
+    (validate-backup-payload body today 'backup-validate))
+  (define view (sync-view (the-sync)))
+  (define data (hash-ref body 'data))
+  (jsexpr->bytes
+   (hasheq 'replaceCount (length (hash-ref view 'devices))
+           'importCount (length (hash-ref data 'devices))
+           'trashCount (length (hash-ref data 'trash))
+           'preferences preferences)))
+
+;; The confirmed restore: re-validated, then applied as one engine-level
+;; operation (docs/sync-design.md LWW takeover semantics).
+(define-rpc (backup-restore [payload Bytes] : Bytes)
+  (define body (bytes->jsexpr payload))
+  (define today (today-string))
+  (define-values (devices trash preferences)
+    (validate-backup-payload body today 'backup-restore))
+  (define result (sync-restore-backup! (the-sync) devices trash preferences))
+  (jsexpr->bytes
+   (hasheq 'devices (hash-ref result 'devices)
+           'trash (hash-ref result 'trash)
+           'preferences preferences)))
+
 ;; ---------- settings ----------
 
 ;; currency is a synced settings claim; the rest of the patch is
@@ -292,7 +387,11 @@
           (for/fold ([settings (hash-ref ldoc 'settings)])
                     ([key (in-list (hash-keys local-patch))])
             (hash-set settings key (hash-ref local-patch key))))
-        (values (hash-set ldoc 'settings merged) (void)))))
+        (values (hash-set ldoc 'settings merged) (void))))
+    ;; the cached view layers local settings under synced claims — rebuild
+    ;; it now or the returned payload (and the next load-all) would serve
+    ;; the previous values until some unrelated refresh
+    (sync-refresh-local-settings! (the-sync)))
   (jsexpr->bytes (hash-ref (sync-view (the-sync)) 'settings)))
 
 ;; ---------- sync ----------

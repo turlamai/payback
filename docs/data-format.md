@@ -64,6 +64,8 @@ defaults so older payloads keep working.
 ```json
 {
   "currency": "CNY",
+  "theme": "system",
+  "language": "system",
   "updateAutoCheck": true,
   "updateBaseUrl": null,
   "lastUpdateCheckAt": null,
@@ -76,6 +78,10 @@ local state:
 
 - `currency` — ISO 4217 code, the default for new devices. Synced: one
   machine's choice becomes every machine's default.
+- `theme` — `system` | `light` | `dark`; the 2026-11 redesign's appearance
+  preference (design/DESIGN.md). Local per machine; included in backups.
+- `language` — `system` | `zh-CN` | `en`; the interface language. Local per
+  machine; included in backups.
 - `updateBaseUrl` — `null` uses the built-in feed URL; may be overridden
   with an `https://` URL for testing.
 - `lastUpdateCheckAt` — epoch seconds of the last **successful** update check;
@@ -106,12 +112,12 @@ Stored fields (native hosts must send every editable field on update):
 | Key | Type | Rules |
 |---|---|---|
 | `id` | string | `d-` + 10 hex, assigned by backend, immutable |
-| `name` | string | 1–100 chars after trim |
+| `name` | string | 1–120 chars after trim (2026-11 redesign; old 1–100 records stay valid) |
 | `icon` | string | emoji, 1–16 chars, default `📦` |
 | `category` | string | one of `computer phone tablet watch audio camera gaming appliance accessory other` |
 | `priceMinor` | integer | 1 … 1,000,000,000 (≤ 10,000,000.00) |
 | `currency` | string | `^[A-Z]{3}$` |
-| `purchaseDate` | string | `yyyy-MM-dd`, 1990-01-01 … today |
+| `purchaseDate` | string | `yyyy-MM-dd`, 1900-01-01 … today (2026-11 redesign; older records stay valid) |
 | `willingPerDayMinor` | integer \| null | 心理价位：每天愿意付的钱，1 … 100,000,000 |
 | `notes` | string | ≤ 2000 chars |
 | `createdAt` / `updatedAt` | string | `yyyy-MM-dd HH:mm:ss` local, backend-owned |
@@ -157,6 +163,44 @@ stable identifiers; hosts localize the labels.
 | `days-100` / `days-365` / `days-1000` | `daysHeld ≥ 100 / 365 / 1000` |
 | `cpd-10` / `cpd-5` / `cpd-2` / `cpd-1` / `cpd-05` | `costPerDayMinor < 1000 / 500 / 200 / 100 / 50` |
 | `paid-back` | willingness set and `paidBack` |
+
+## Trash (recently deleted)
+
+`delete-device` writes a tombstone; the tombstoned LWW winner is hidden
+from the merged view but stays known. The 2026-11 redesign surfaces those
+winners as **trash**: newest deletion first, ties broken by id, identical
+on every machine. There is no purge and no permanent delete — records stay
+restorable until a backup restore replaces the library (and a restore can
+never un-delete what other machines still carry, see `sync-design.md`).
+
+`load-all` reports the current trash size as `trashCount`; `trash-list`
+returns the full records (each with a computed block). `restore-device`
+clears the tombstone with a fresh `updatedAt` so the LWW reinstates the
+original record — purchase details and goal included.
+
+## Backup (payback.backup v1)
+
+An unencrypted JSON document a user can export, carry by hand and restore
+on any machine:
+
+```json
+{
+  "schema": "payback.backup",
+  "version": 1,
+  "createdAt": "ISO-8601 UTC (informational, never validated)",
+  "data": {
+    "devices": [ ...live stored records, metadata included... ],
+    "trash": [ ...tombstoned winners, deletedAt required... ],
+    "preferences": { "currency": "CNY", "theme": "system", "language": "system" }
+  }
+}
+```
+
+Validation is all-or-nothing: envelope, per-record fields, id uniqueness
+across **both** lists, and the 2,000-per-list cap must all pass before a
+preview or a restore touches anything. Devices entries must not carry a
+tombstone; trash entries must. Preferences accept any canonical currency
+code plus the `theme`/`language` enums.
 
 ## Summary
 
@@ -209,7 +253,12 @@ with the validation message; the backend never crashes on bad input.
 
 | RPC | Signature | Result JSON |
 |---|---|---|
-| `load-all` | `() → Bytes` | `{app, settings, devices[], summary}`; milestone objects carry a transient `"new"` flag |
+| `load-all` | `() → Bytes` | `{app, settings, devices[], trashCount, summary}`; milestone objects carry a transient `"new"` flag |
+| `trash-list` | `() → Bytes` | `{trash: [stored records + computed, newest deletion first]}` |
+| `restore-device` | `(String id) → Bytes` | the reinstated device incl. computed; errors when `id` names no tombstoned record |
+| `backup-export` | `() → Bytes` | a full `payback.backup` document (devices + trash + preferences) |
+| `backup-validate` | `(Bytes) → Bytes` | `{replaceCount, importCount, trashCount, preferences}`; full validation, no writes |
+| `backup-restore` | `(Bytes) → Bytes` | `{devices, trash, preferences}` — post-restore counts; re-validates, then applies as one engine operation (see `sync-design.md` for the LWW semantics) |
 | `daily-digest` | `() → Bytes` | `{status: ok \| already, earnedTotalMinor, earnedPerCurrency[], deviceCount, bestDeviceName, bestDeviceCurrency, bestDeviceCostPerDayMinor}`; `earnedTotalMinor` is null on mixed currencies and hosts render `earnedPerCurrency` instead |
 | `add-device` | `(Bytes) → Bytes` | stored device incl. `computed` |
 | `update-device` | `(Bytes) → Bytes` | full replace of editable fields; `id` required |

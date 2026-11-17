@@ -88,9 +88,11 @@
   (for/list ([entry (in-list (rpc-schema))]) (hash-ref entry 'name)))
 (check-equal?
  rpc-names
- (list "add-device" "check-updates" "configure-sync"
+ (list "add-device" "backup-export" "backup-restore" "backup-validate"
+       "check-updates" "configure-sync"
        "daily-digest" "delete-device" "load-all"
-       "rename-machine" "save-settings" "start-download" "sync-state"
+       "rename-machine" "restore-device" "save-settings" "start-download"
+       "sync-state" "trash-list"
        "update-device" "update-state"))
 
 ;; ---------- devices over the wire ----------
@@ -384,3 +386,84 @@
    "configure-sync" (jsexpr->bytes (hasheq 'dir "relative/path")))
   "absolute folder path"))
 (check-false (hash-ref (call-rpc "sync-state") 'enabled))
+
+;; ---------- trash, restore and backup round-trips (2026-11 redesign) ----------
+
+;; the redesign's per-machine display preferences ride save-settings
+(define theme-settings
+  (call-rpc "save-settings"
+            (jsexpr->bytes (hasheq 'theme "dark" 'language "zh-CN"))))
+(check-equal? (hash-ref theme-settings 'theme) "dark")
+(check-equal? (hash-ref theme-settings 'language) "zh-CN")
+
+;; the store holds 11 live devices; the deletions above left 3 tombstones
+(define backup (call-rpc "backup-export"))
+(check-equal? (hash-ref backup 'schema) "payback.backup")
+(check-equal? (hash-ref backup 'version) 1)
+(check-true (string? (hash-ref backup 'createdAt)))
+(define backup-data (hash-ref backup 'data))
+(check-equal? (length (hash-ref backup-data 'devices)) 11)
+(check-equal? (length (hash-ref backup-data 'trash)) 3)
+(check-equal? (hash-ref (hash-ref backup-data 'preferences) 'currency) "USD")
+(check-equal? (hash-ref (hash-ref backup-data 'preferences) 'theme) "dark")
+(check-equal? (hash-ref (hash-ref backup-data 'preferences) 'language)
+              "zh-CN")
+
+;; the preview validates fully and never writes
+(check-equal?
+ (call-rpc "backup-validate" (jsexpr->bytes backup))
+ (hasheq 'replaceCount 11 'importCount 11 'trashCount 3
+         'preferences (hasheq 'currency "USD" 'theme "dark"
+                              'language "zh-CN")))
+
+;; wrong schema/version is rejected without touching data
+(check-true
+ (string-contains?
+  (call-rpc/expect-error
+   "backup-validate"
+   (jsexpr->bytes (hasheq 'schema "payback.backup" 'version 2
+                          'data (hasheq 'devices '() 'trash '()
+                                        'preferences (hasheq)))))
+  "version"))
+
+;; changes made after the export are wiped by the confirmed restore: the
+;; addition is tombstoned (recoverable), every export record comes back
+(define post-id
+  (hash-ref
+   (call-rpc "add-device"
+             (jsexpr->bytes
+              (hasheq 'name "Post-Backup Addition" 'icon "📦"
+                      'category "other" 'priceMinor 100 'currency "CNY"
+                      'purchaseDate "2026-01-01"
+                      'willingPerDayMinor 'null 'notes "")))
+   'id))
+(check-equal? (length (hash-ref (call-rpc "load-all") 'devices)) 12)
+
+(define restore-result (call-rpc "backup-restore" (jsexpr->bytes backup)))
+(check-equal? (hash-ref restore-result 'devices) 11)
+(check-equal? (hash-ref restore-result 'trash) 4)
+
+(define after-restore (call-rpc "load-all"))
+(check-equal? (length (hash-ref after-restore 'devices)) 11)
+(check-equal? (hash-ref after-restore 'trashCount) 4)
+(check-equal? (hash-ref (hash-ref after-restore 'settings) 'currency) "USD")
+
+;; the trash list carries computed blocks; the tombstoned addition is there
+(define trash-doc (call-rpc "trash-list"))
+(check-equal? (length (hash-ref trash-doc 'trash)) 4)
+(define tombstoned-addition
+  (for/first ([d (in-list (hash-ref trash-doc 'trash))]
+              #:when (string=? (hash-ref d 'id) post-id))
+    d))
+(check-true (string? (hash-ref tombstoned-addition 'deletedAt)))
+(check-true (hash? (hash-ref tombstoned-addition 'computed)))
+
+;; restore-device clears the tombstone with a fresh LWW claim
+(check-true
+ (string-contains? (call-rpc/expect-error "restore-device" "d-nonexistent")
+                   "no deleted device"))
+(define restored-device (call-rpc "restore-device" post-id))
+(check-equal? (hash-ref restored-device 'name) "Post-Backup Addition")
+(check-equal? (hash-ref restored-device 'deletedAt) 'null)
+(check-equal? (length (hash-ref (call-rpc "trash-list") 'trash)) 3)
+(check-equal? (length (hash-ref (call-rpc "load-all") 'devices)) 12)

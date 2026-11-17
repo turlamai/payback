@@ -37,9 +37,13 @@
 
 ;; Local-only settings: the sync whitelist (currency) is merged from shard
 ;; claims by sync.rkt and never persisted here. `currency` stays as the
-;; fallback default for a fresh install with no claims anywhere.
+;; fallback default for a fresh install with no claims anywhere. `theme`
+;; and `language` are the 2026-11 redesign's per-machine comfort choices
+;; (design/DESIGN.md); they ride the backup format but never sync.
 (define (default-settings)
   (hasheq 'currency "CNY"
+          'theme "system"
+          'language "system"
           'updateAutoCheck #t
           'updateBaseUrl 'null
           'lastUpdateCheckAt 'null

@@ -32,8 +32,8 @@
   (check-false (date-string? "not-a-date"))
   (check-true (valid-date-range? "2026-09-30" "2026-09-30"))
   (check-false (valid-date-range? "2026-10-01" "2026-09-30"))  ; future
-  (check-false (valid-date-range? "1989-12-31" "2026-09-30"))  ; before floor
-  (check-true (valid-date-range? "1990-01-01" "2026-09-30")))
+  (check-false (valid-date-range? "1899-12-31" "2026-09-30"))  ; before floor
+  (check-true (valid-date-range? "1900-01-01" "2026-09-30")))
 
 (test-case "days-between"
   (check-equal? (days-between "2026-01-01" "2026-01-01") 0)

@@ -23,6 +23,46 @@
       }
     },
     {
+      "arguments": [],
+      "name": "backup-export",
+      "result": {
+        "kind": "scalar",
+        "name": "Bytes"
+      }
+    },
+    {
+      "arguments": [
+        {
+          "name": "payload",
+          "type": {
+            "kind": "scalar",
+            "name": "Bytes"
+          }
+        }
+      ],
+      "name": "backup-restore",
+      "result": {
+        "kind": "scalar",
+        "name": "Bytes"
+      }
+    },
+    {
+      "arguments": [
+        {
+          "name": "payload",
+          "type": {
+            "kind": "scalar",
+            "name": "Bytes"
+          }
+        }
+      ],
+      "name": "backup-validate",
+      "result": {
+        "kind": "scalar",
+        "name": "Bytes"
+      }
+    },
+    {
       "arguments": [
         {
           "name": "force",
@@ -105,6 +145,22 @@
     {
       "arguments": [
         {
+          "name": "id",
+          "type": {
+            "kind": "scalar",
+            "name": "String"
+          }
+        }
+      ],
+      "name": "restore-device",
+      "result": {
+        "kind": "scalar",
+        "name": "Bytes"
+      }
+    },
+    {
+      "arguments": [
+        {
           "name": "payload",
           "type": {
             "kind": "scalar",
@@ -129,6 +185,14 @@
     {
       "arguments": [],
       "name": "sync-state",
+      "result": {
+        "kind": "scalar",
+        "name": "Bytes"
+      }
+    },
+    {
+      "arguments": [],
+      "name": "trash-list",
       "result": {
         "kind": "scalar",
         "name": "Bytes"

@@ -4,6 +4,7 @@
 ;; normalized, and which violations are rejected.
 
 (require rackunit
+         racket/list
          "../app/wire.rkt")
 
 (define today "2026-09-30")
@@ -71,7 +72,7 @@
                    (valid-payload #:price 100000.5)          ; not an integer
                    (valid-payload #:price 2000000000)        ; over cap
                    (valid-payload #:date "2026-10-01")       ; future
-                   (valid-payload #:date "1989-12-31")       ; before floor
+                   (valid-payload #:date "1899-12-31")       ; before floor
                    (valid-payload #:date "2026-02-30")       ; impossible
                    (valid-payload #:extra (list 'category "boat"))
                    (valid-payload #:extra (list 'currency "cny"))
@@ -127,11 +128,14 @@
     (validate-settings-patch
      (hasheq 'currency "USD" 'updateAutoCheck #f
              'updateBaseUrl "https://example.com/payback/"
+             'theme "dark" 'language "zh-CN"
              'rolloutBucket 5)          ; internal key -> rejected
      'save-settings))
   (check-equal? (hash-ref patch 'currency) "USD")
   (check-equal? (hash-ref patch 'updateAutoCheck) #f)
   (check-equal? (hash-ref patch 'updateBaseUrl) "https://example.com/payback/")
+  (check-equal? (hash-ref patch 'theme) "dark")
+  (check-equal? (hash-ref patch 'language) "zh-CN")
   (check-false (hash-has-key? patch 'rolloutBucket)))
 
 (test-case "settings patch resets updateBaseUrl with null"
@@ -147,7 +151,11 @@
                         (hasheq 'updateAutoCheck "yes")
                         (hasheq 'updateAutoCheck 'null)
                         (hasheq 'updateBaseUrl "http://insecure.example")
-                        (hasheq 'updateBaseUrl "not a url")))])
+                        (hasheq 'updateBaseUrl "not a url")
+                        (hasheq 'theme "sepia")
+                        (hasheq 'theme 'null)
+                        (hasheq 'language "fr")
+                        (hasheq 'language 'null)))])
     (check-exn exn:fail?
                (lambda () (validate-settings-patch payload 'save-settings))
                (format "~a must be rejected" payload))))
@@ -156,3 +164,95 @@
   (check-true (regexp-match? #px"^d-[0-9a-f]{10}$" (new-device-id)))
   (check-true (regexp-match? #px"^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
                              (now-timestamp))))
+
+;; ---------- backup validation (payback.backup v1) ----------
+
+(define (valid-backup #:extra-devices [extra-devices '()]
+                      #:trash [trash '()]
+                      #:preferences [preferences
+                                    (hasheq 'currency "CNY" 'theme "system"
+                                            'language "system")])
+  (hasheq 'schema "payback.backup"
+          'version 1
+          'createdAt "2026-11-15T12:00:00Z"
+          'data (hasheq 'devices
+                        (list* (hasheq 'id "d-backup1" 'name "Backup Device"
+                                       'icon "💻" 'category "computer"
+                                       'priceMinor 1299900 'currency "CNY"
+                                       'purchaseDate "2024-06-01"
+                                       'willingPerDayMinor 3000 'notes ""
+                                       'createdAt "2024-06-01 09:00:00"
+                                       'updatedAt "2024-06-01 09:00:00"
+                                       'editedBy "m-aaaaaaaa"
+                                       'deletedAt 'null)
+                               extra-devices)
+                        'trash trash
+                        'preferences preferences)))
+
+(test-case "a valid backup payload canonicalizes"
+  (define-values (devices trash preferences)
+    (validate-backup-payload (valid-backup) today 'backup-validate))
+  (check-equal? (length devices) 1)
+  (check-equal? (hash-ref (first devices) 'id) "d-backup1")
+  (check-equal? trash '())
+  (check-equal? (hash-ref preferences 'currency) "CNY"))
+
+(test-case "backup rejections"
+  (for ([payload (in-list
+                  (list
+                   ;; wrong envelope
+                   (hasheq 'schema "other.backup" 'version 1
+                           'data (hasheq 'devices '() 'trash '()
+                                         'preferences (hasheq)))
+                   ;; missing data block
+                   (hasheq 'schema "payback.backup" 'version 1)
+                   ;; device entries must not carry tombstones
+                   (valid-backup
+                    #:extra-devices
+                    (list (hasheq 'id "d-live2" 'name "Ghost" 'icon "📦"
+                                  'category "other" 'priceMinor 1
+                                  'currency "CNY" 'purchaseDate "2026-01-01"
+                                  'willingPerDayMinor 'null 'notes ""
+                                  'deletedAt "2026-11-01 10:00:00")))
+                   ;; trash entries must carry tombstones
+                   (valid-backup
+                    #:trash
+                    (list (hasheq 'id "d-gone" 'name "No Tombstone"
+                                  'icon "📦" 'category "other" 'priceMinor 1
+                                  'currency "CNY" 'purchaseDate "2026-01-01"
+                                  'willingPerDayMinor 'null 'notes ""
+                                  'deletedAt 'null)))
+                   ;; duplicate id across the two lists
+                   (valid-backup
+                    #:trash
+                    (list (hasheq 'id "d-backup1" 'name "Same Id" 'icon "📦"
+                                  'category "other" 'priceMinor 1
+                                  'currency "CNY" 'purchaseDate "2026-01-01"
+                                  'willingPerDayMinor 'null 'notes ""
+                                  'deletedAt "2026-11-01 10:00:00")))
+                   ;; bad preferences
+                   (valid-backup #:preferences
+                                 (hasheq 'currency "cny" 'theme "system"
+                                         'language "system"))
+                   (valid-backup #:preferences
+                                 (hasheq 'currency "CNY" 'theme "sepia"
+                                         'language "system"))
+                   (valid-backup #:preferences
+                                 (hasheq 'currency "CNY" 'theme "system"
+                                         'language "fr"))))])
+    (check-exn exn:fail?
+               (lambda () (validate-backup-payload payload today 'backup-validate))
+               (format "~a must be rejected" payload))))
+
+(test-case "backup device caps"
+  (define overflow
+    (valid-backup
+     #:extra-devices
+     (for/list ([i (in-range 2000)])
+       (hasheq 'id (format "d-extra-~a" i) 'name "Extra" 'icon "📦"
+               'category "other" 'priceMinor 1 'currency "CNY"
+               'purchaseDate "2026-01-01" 'willingPerDayMinor 'null
+               'notes ""))))
+  (check-exn exn:fail?
+             (lambda () (validate-backup-payload overflow today 'backup-validate))
+             "2001 devices exceed the cap"))

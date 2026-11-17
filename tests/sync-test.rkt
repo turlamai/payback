@@ -484,3 +484,115 @@
   (check-equal? (hash-ref wrapper 'editedBy) (sync-machine-id eng))
   (check-true (string? (hash-ref wrapper 'updatedAt))
               "the claim lands with (updatedAt, editedBy) metadata"))
+
+;; ---------- trash and backup restore (2026-11 redesign) ----------
+
+(test-case "merge-shards exposes tombstone winners as trash, newest first"
+  (define merged (merge-shards (list shard-a shard-b shard-c)))
+  (define trash (hash-ref merged 'trash))
+  ;; the golden fixture carries exactly one tombstoned winner; its id
+  ;; must be absent from the live list and present here
+  (for ([d (in-list trash)])
+    (check-true (string? (hash-ref d 'deletedAt)))
+    (check-false (member (hash-ref d 'id) (view-live-ids merged))
+                 "a tombstoned winner never appears in the live list"))
+  (check-equal? trash
+                (sort trash
+                      (λ (a b)
+                        (cond
+                          [(string=? (hash-ref a 'deletedAt)
+                                     (hash-ref b 'deletedAt))
+                           (string<? (hash-ref a 'id) (hash-ref b 'id))]
+                          [else (string>? (hash-ref a 'deletedAt)
+                                          (hash-ref b 'deletedAt))])))
+                "trash is ordered newest deletion first"))
+
+(test-case "sync-restore-backup! replaces the library as one operation"
+  (define dir (build-path tmp-root "restore"))
+  (make-directory* dir)
+  (define eng (make-test-engine dir))
+  ;; one device of our own and one foreign live device
+  (sync-mutate! eng
+    (lambda (_doc)
+      (values (list 'device
+                    (hasheq 'id "d-own" 'name "Own Device" 'icon "📦"
+                            'category "other" 'priceMinor 100
+                            'currency "CNY" 'purchaseDate "2025-01-01"
+                            'willingPerDayMinor 'null 'notes ""
+                            'createdAt "2025-01-01 09:00:00"
+                            'updatedAt "2025-01-01 09:00:00"
+                            'editedBy (sync-machine-id eng)
+                            'deletedAt 'null))
+              (void))))
+  (define foreign-id "m-abcdef01")
+  (call-with-output-file
+      (build-path dir (shard-file-name foreign-id))
+    (lambda (o)
+      (write-json
+       (hasheq 'version 2
+               'machine (hasheq 'id foreign-id 'name "Foreign" 'updatedAt "t")
+               'devices
+               (list (hasheq 'id "d-foreign" 'name "Foreign Device"
+                             'icon "📦" 'category "other" 'priceMinor 500
+                             'currency "CNY" 'purchaseDate "2025-01-01"
+                             'willingPerDayMinor 'null 'notes ""
+                             'createdAt "2025-01-01 09:00:00"
+                             'updatedAt "2025-01-01 09:00:00"
+                             'editedBy foreign-id 'deletedAt 'null))
+               'settings (hasheq))
+       o)))
+  (sync-refresh-if-changed! eng)
+  (check-equal? (view-live-ids (sync-view eng)) '("d-foreign" "d-own"))
+
+  ;; restore a backup that knows only "d-own" (with one trash entry) —
+  ;; the foreign device is replaced by a tombstone we own
+  (define backup-devices
+    (list (hasheq 'id "d-own" 'name "Restored Device" 'icon "📦"
+                  'category "other" 'priceMinor 200 'currency "CNY"
+                  'purchaseDate "2025-01-01" 'willingPerDayMinor 'null
+                  'notes "" 'createdAt "2025-01-01 09:00:00"
+                  'updatedAt "2025-06-01 09:00:00" 'editedBy foreign-id
+                  'deletedAt 'null)))
+  (define backup-trash
+    (list (hasheq 'id "d-deleted" 'name "Deleted Before Backup" 'icon "📦"
+                  'category "other" 'priceMinor 50 'currency "CNY"
+                  'purchaseDate "2024-01-01" 'willingPerDayMinor 'null
+                  'notes "" 'createdAt "2024-01-01 09:00:00"
+                  'updatedAt "2024-02-01 09:00:00" 'editedBy foreign-id
+                  'deletedAt "2024-03-01 09:00:00")))
+  (define result
+    (sync-restore-backup! eng backup-devices backup-trash
+                          (hasheq 'currency "EUR" 'theme "dark"
+                                  'language "en")))
+  ;; the live library is exactly the backup's device set…
+  (check-equal? (view-live-ids (sync-view eng)) '("d-own"))
+  (check-equal? (hash-ref result 'devices) 1)
+  ;; …the foreign device is tombstoned into our trash…
+  (check-equal? (hash-ref result 'trash) 2)
+  (check-not-false
+   (for/first ([d (in-list (hash-ref (sync-view eng) 'trash))]
+               #:when (string=? (hash-ref d 'id) "d-foreign"))
+     d)
+   "the replaced foreign device is restorable")
+  ;; …the restored record carries our fresh LWW claim…
+  (define restored
+    (for/first ([d (in-list (hash-ref (sync-view eng) 'devices))]) d))
+  (check-equal? (hash-ref restored 'name) "Restored Device")
+  (check-equal? (hash-ref restored 'editedBy) (sync-machine-id eng))
+  ;; …the currency claim moved…
+  (check-equal? (hash-ref (hash-ref (sync-view eng) 'settings) 'currency)
+                "EUR")
+  ;; …and the local document holds theme/language
+  (define ldoc
+    (read-json-file (build-path dir "local.json")))
+  (check-equal? (hash-ref (hash-ref ldoc 'settings) 'theme) "dark")
+  (check-equal? (hash-ref (hash-ref ldoc 'settings) 'language) "en")
+  ;; trash entries keep their original deletion timestamp, so ordering
+  ;; stays meaningful after a restore
+  (check-equal?
+   (hash-ref
+    (for/first ([d (in-list (hash-ref (sync-view eng) 'trash))]
+                #:when (string=? (hash-ref d 'id) "d-deleted"))
+      d)
+    'deletedAt)
+   "2024-03-01 09:00:00"))
