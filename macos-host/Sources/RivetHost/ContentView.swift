@@ -1,35 +1,46 @@
 import SwiftUI
 
+// Main window: prototype layout (design/prototype/*.html, 2026-11 redesign)
+// — sidebar carries brand, investment summary, the device list and the
+// settings entry; the workspace is the nonmodal detail pane. Delete is a
+// tombstone with an undo toast (docs/data-format.md "Trash").
+
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var sortOrder: SortOrder = .added
+    @Environment(\.openSettings) private var openSettings
     @State private var selectedID: Device.ID?
     @State private var confirmingDelete: Device?
+    @State private var sortOrder: SortOrder = .added
 
     enum SortOrder: String, CaseIterable, Identifiable {
         case added
+        case date
         case dailyCost
-        case payback
 
         var id: String { rawValue }
 
         var label: String {
             switch self {
             case .added: return L10n.t(.sortAdded)
+            case .date: return L10n.t(.sortDate)
             case .dailyCost: return L10n.t(.sortDailyCost)
-            case .payback: return L10n.t(.sortPayback)
             }
         }
 
+        /// the prototype's contract: added order is the engine's merged
+        /// order; 每日成本排序按币种分组，同组数值降序 (DESIGN.md)
         func sort(_ devices: [Device]) -> [Device] {
             switch self {
             case .added:
-                return devices.sorted { $0.createdAt > $1.createdAt }
+                return devices
+            case .date:
+                return devices.sorted { $0.purchaseDate > $1.purchaseDate }
             case .dailyCost:
-                return devices.sorted { $0.computed.costPerDayMinor < $1.computed.costPerDayMinor }
-            case .payback:
-                return devices.sorted {
-                    ($0.computed.paybackProgress ?? -1) > ($1.computed.paybackProgress ?? -1)
+                return devices.sorted { a, b in
+                    if a.currency != b.currency {
+                        return a.currency < b.currency
+                    }
+                    return a.computed.costPerDayMinor > b.computed.costPerDayMinor
                 }
             }
         }
@@ -38,9 +49,11 @@ struct ContentView: View {
     var body: some View {
         content
             .background(PaybackTheme.paper)
+            .preferredColorScheme(model.theme.colorScheme)
             .id(model.uiLanguage)   // rebuild the tree so every string re-resolves
-            // a fresh add: the model publishes the confirmed id once the
-            // reload lands it, and the detail pane follows the new record
+            // a fresh add (and the toast undo): the model publishes the
+            // confirmed id once the reload lands it, and the detail pane
+            // follows the restored record
             .onChange(of: model.pendingSelection) { _, newValue in
                 guard let id = newValue else { return }
                 selectedID = id
@@ -49,37 +62,17 @@ struct ContentView: View {
             .frame(minWidth: 980, minHeight: 600)
         .toolbar {
             ToolbarItemGroup {
-                Picker(L10n.t(.sortBy), selection: $sortOrder) {
-                    ForEach(SortOrder.allCases) { order in
-                        Text(order.label).tag(order)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                // the detail pane shows only the device; its actions live
-                // here as quiet borderless icons, the way Mail/Notes do it
                 Button {
-                    if let device = selectedDevice {
-                        model.beginEditDeviceForm(device)
-                    }
+                    model.toggleAppearance()
                 } label: {
-                    Image(systemName: "pencil")
+                    Image(systemName: effectiveDark ? "sun.max" : "moon")
                 }
-                .disabled(selectedDevice == nil)
-                .help(L10n.t(.edit))
-
-                Button {
-                    confirmingDelete = selectedDevice
-                } label: {
-                    Image(systemName: "trash")
-                }
-                .disabled(selectedDevice == nil)
-                .help(L10n.t(.delete))
+                .help(L10n.t(.toggleAppearance))
 
                 Button {
                     model.beginNewDeviceForm()
                 } label: {
-                    Image(systemName: "plus.circle.fill")
+                    Label(L10n.t(.addDevice), systemImage: "plus.circle.fill")
                         .foregroundStyle(PaybackTheme.accent)
                 }
                 .help(L10n.t(.addDevice))
@@ -91,15 +84,15 @@ struct ContentView: View {
                                 set: { if !$0 { confirmingDelete = nil } }),
                             titleVisibility: .visible,
                             presenting: confirmingDelete) { device in
-            Button(L10n.t(.delete), role: .destructive) {
+            Button(L10n.t(.moveToDeleted), role: .destructive) {
                 model.deleteDevice(device)
                 confirmingDelete = nil
             }
-            Button(L10n.t(.cancel), role: .cancel) {
+            Button(L10n.t(.keepDevice), role: .cancel) {
                 confirmingDelete = nil
             }
         } message: { device in
-            Text(L10n.t(.deleteConfirmText))
+            Text("\(device.name)\n\(L10n.t(.deleteConfirmText))")
         }
         .sheet(isPresented: $model.showingNewDevice,
                onDismiss: { model.deviceFormDismissed(editing: false) }) {
@@ -128,6 +121,16 @@ struct ContentView: View {
             Alert(title: Text(L10n.t(.genericError)), message: Text(item.text),
                   dismissButton: .default(Text(L10n.t(.close))))
         }
+        .overlay(alignment: .bottom) {
+            ToastView()
+                .padding(.bottom, 24)
+        }
+    }
+
+    private var effectiveDark: Bool {
+        model.theme == .dark
+            || (model.theme == .system
+                && NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
     }
 
     @ViewBuilder
@@ -141,40 +144,23 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if model.devices.isEmpty {
-            emptyState
-        } else {
-            deviceList
-        }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(PaybackTheme.accentSoft)
-                    .frame(width: 96, height: 96)
-                Text("💰")
-                    .font(.system(size: 44))
+            NavigationSplitView {
+                sidebar
+            } detail: {
+                EmptyLibraryView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(PaybackTheme.paper)
             }
-            Text(L10n.t(.emptyTitle))
-                .font(.title2.bold())
-            Text(L10n.t(.emptyHint))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 380)
-            Button(L10n.t(.addDevice)) { model.beginNewDeviceForm() }
-                .buttonStyle(.borderedProminent)
-                .tint(PaybackTheme.accent)
+        } else {
+            deviceSplit
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // Apple's answer to "browse a collection, inspect one item" is the
     // nonmodal split: selection-driven detail, no dialog between the user
-    // and the next device (HIG: prefer nonmodal design; sheets are for
-    // completing tasks, which is what edit/add keep doing).
-    private var deviceList: some View {
+    // and the next device (HIG: prefer nonmodal design) — and the
+    // prototype's own IA: sidebar list + workspace detail.
+    private var deviceSplit: some View {
         NavigationSplitView {
             sidebar
         } detail: {
@@ -185,15 +171,16 @@ struct ContentView: View {
     }
 
     private var sidebar: some View {
-        // the summary describes all devices, so it belongs to the
-        // all-devices column: collapsing the sidebar is "focus on one
-        // device", and the aggregate steps aside with the list
-        VStack(spacing: 0) {
-            SummaryHeader(summary: model.summary, currency: model.settings.currency,
-                          quip: model.quip, compact: true)
+        VStack(spacing: 20) {
+            brandHeader
+            SummaryBlock(summary: model.summary,
+                         currency: model.settings.currency,
+                         devices: model.devices)
+            sortHeader
             List(selection: selectionBinding) {
                 ForEach(sortOrder.sort(model.devices)) { device in
-                    SidebarDeviceRow(device: device)
+                    SidebarDeviceRow(device: device,
+                                     selected: device.id == selectedDevice?.id)
                         .tag(device.id)
                         .contextMenu {
                             Button(L10n.t(.edit)) { model.beginEditDeviceForm(device) }
@@ -203,9 +190,94 @@ struct ContentView: View {
                         }
                 }
             }
-            .listStyle(.sidebar)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            sideAddButton
+            sidebarFooter
         }
-        .navigationSplitViewColumnWidth(min: 300, ideal: 330, max: 400)
+        .padding(.horizontal, 20)
+        .padding(.top, 28)
+        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(PaybackTheme.sidebar)
+        .navigationSplitViewColumnWidth(min: 280, ideal: 304, max: 400)
+    }
+
+    private var brandHeader: some View {
+        HStack(spacing: 10) {
+            PaybackTheme.brandmark
+            Text("Payback")
+                .font(.system(size: 23, weight: .bold))
+                .kerning(-0.6)
+                .foregroundStyle(PaybackTheme.ink)
+            Spacer()
+        }
+    }
+
+    private var sortHeader: some View {
+        HStack {
+            Text(L10n.t(.myDevices))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(PaybackTheme.ink)
+            Spacer()
+            Picker(L10n.t(.sortBy), selection: $sortOrder) {
+                ForEach(SortOrder.allCases) { order in
+                    Text(order.label).tag(order)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .controlSize(.small)
+            .tint(PaybackTheme.muted)
+        }
+        .padding(.bottom, 4)
+    }
+
+    private var sideAddButton: some View {
+        Button {
+            model.beginNewDeviceForm()
+        } label: {
+            Label(L10n.t(.addDevice), systemImage: "plus")
+                .font(.system(size: 14, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+        }
+        .buttonStyle(.bordered)
+        .tint(PaybackTheme.accent)
+        .padding(.top, 4)
+    }
+
+    private var sidebarFooter: some View {
+        VStack(spacing: 12) {
+            Divider()
+                .overlay(PaybackTheme.line)
+            Button {
+                openSettings()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 15))
+                    Text(L10n.t(.settingsTitle))
+                        .font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text(model.uiLanguage == .en ? "EN" : "中文")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(PaybackTheme.muted)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(PaybackTheme.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(PaybackTheme.line, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(PaybackTheme.ink)
+        }
     }
 
     private var selectionBinding: Binding<Device.ID?> {
@@ -223,7 +295,9 @@ struct ContentView: View {
     private var detailPane: some View {
         if let device = selectedDevice {
             DeviceDetail(device: device,
-                         currency: model.settings.currency)
+                         currency: model.settings.currency,
+                         onEdit: { model.beginEditDeviceForm(device) },
+                         onDelete: { confirmingDelete = device })
         }
     }
 }
@@ -267,282 +341,259 @@ private struct SecondaryPresentations: View {
     }
 }
 
-/// Toolbar globe menu: in-app language switch, applied live.
-struct LanguageMenu: View {
-    @EnvironmentObject private var model: AppModel
-
-    private var binding: Binding<AppLanguage> {
-        Binding(get: { model.uiLanguage }, set: { model.setLanguage($0) })
-    }
-
-    var body: some View {
-        Menu {
-            Picker(L10n.t(.languageTitle), selection: binding) {
-                ForEach(AppLanguage.allCases) { language in
-                    Text(language.label).tag(language)
-                }
-            }
-            .pickerStyle(.inline)
-        } label: {
-            Image(systemName: "globe")
-        }
-        .menuStyle(.button)
-        .help(L10n.t(.languageTitle))
-    }
-}
-
 private struct ErrorText: Identifiable {
     let text: String
     var id: String { text }
 }
 
-// ---------- summary ----------
+// ---------- undo toast ----------
 
-/// The portfolio strip: four stat tiles, with 「已赚回」 as the hero number.
-/// Full-width row in a classic layout, 2×2 grid inside the split view's
-/// sidebar (`compact`).
-struct SummaryHeader: View {
-    let summary: Summary
-    let currency: String
-    var quip: String = ""
-    var compact: Bool = false
+/// Bottom-center toast (prototype .toast): message + optional 撤销 action,
+/// 10 s when undoable, 6 s otherwise.
+struct ToastView: View {
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        VStack(spacing: 8) {
-            if compact {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())],
-                          spacing: 8) {
-                    tiles
-                }
-            } else {
-                HStack(spacing: 12) {
-                    tiles
+        if let toast = model.toast {
+            HStack(spacing: 16) {
+                Text(toast.message)
+                    .font(.system(size: 14))
+                    .foregroundStyle(PaybackTheme.paper)
+                if toast.undoID != nil {
+                    Button {
+                        model.undoDelete()
+                    } label: {
+                        Text(L10n.t(.undo))
+                            .font(.system(size: 14, weight: .medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .overlay(
+                                Capsule().strokeBorder(PaybackTheme.paper, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(PaybackTheme.paper)
                 }
             }
-            if !quip.isEmpty {
-                HStack(spacing: 6) {
-                    Text("✦").foregroundStyle(PaybackTheme.accent)
-                    Text(quip)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(PaybackTheme.ink)
+            )
+            .task(id: toast.id) {
+                try? await Task.sleep(nanoseconds: toast.undoID == nil
+                                        ? 6_000_000_000 : 10_000_000_000)
+                if model.toast?.id == toast.id { model.toast = nil }
             }
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
-        .padding(.horizontal, compact ? 14 : 20)
-        .padding(.vertical, compact ? 12 : 14)
-    }
-
-    @ViewBuilder
-    private var tiles: some View {
-        StatTile(label: L10n.t(.totalSpent),
-                 value: spentText)
-        StatTile(label: L10n.t(.earnedBack),
-                 value: earnedText,
-                 tint: earnedPositive ? PaybackTheme.earn : nil,
-                 hero: earnedPositive)
-        StatTile(label: L10n.t(.overallDaily),
-                 value: dailyText)
-        StatTile(label: L10n.t(.deviceCount),
-                 value: String(summary.deviceCount))
-    }
-
-    // Mixed portfolios never show one combined money value: the backend
-    // nulls the scalars and the tiles join the per-currency groups (#23).
-    private var groups: [CurrencyGroup]? {
-        guard let groups = summary.currencyGroups, groups.count > 1 else {
-            return nil
-        }
-        return groups
-    }
-
-    private var spentText: String {
-        if let groups {
-            return groups
-                .map { group -> String in
-                    Money.major(Double(group.totalSpentMinor),
-                                code: group.currency)
-                }
-                .joined(separator: " · ")
-        }
-        return Money.major(summary.totalSpentMinor ?? 0, code: currency)
-    }
-
-    private var earnedText: String {
-        if let groups {
-            return groups
-                .map { group -> String in
-                    Money.major(group.earnedTotalMinor, code: group.currency)
-                }
-                .joined(separator: " · ")
-        }
-        return Money.major(summary.earnedTotalMinor ?? 0, code: currency)
-    }
-
-    private var earnedPositive: Bool { summary.earnedTotalMinor.map { $0 > 0 } ?? false }
-
-    private var dailyText: String {
-        if let groups {
-            return groups
-                .map { group -> String in
-                    Money.perDay(group.avgCostPerDayMinor, code: group.currency)
-                }
-                .joined(separator: " · ")
-        }
-        return Money.perDay(summary.avgCostPerDayMinor ?? 0, code: currency)
     }
 }
 
-struct StatTile: View {
-    let label: String
-    let value: String
-    var tint: Color?
-    var hero = false
+// ---------- sidebar summary ----------
+
+/// The prototype's .sidebar-summary: investment hero for the default
+/// currency group, static caption, and the two mini stats. All numbers
+/// come from the engine's summary; hosts only pick the group and format.
+struct SummaryBlock: View {
+    let summary: Summary
+    let currency: String
+    let devices: [Device]
+
+    private var group: CurrencyGroup? {
+        summary.currencyGroups?.first { $0.currency == currency }
+    }
+
+    private var mixed: Bool {
+        devices.contains { $0.currency != currency }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.system(hero ? .title2 : .title3, design: .rounded).bold())
+        VStack(alignment: .leading, spacing: 0) {
+            Text(L10n.t(.investmentEyebrow)
+                .replacingOccurrences(of: "{currency}", with: currency))
+                .font(.system(size: 13, weight: .semibold))
+                .kerning(0.6)
+                .foregroundStyle(PaybackTheme.muted)
+            Text(investmentText)
+                .font(.system(size: 30, weight: .semibold))
+                .kerning(-1)
                 .monospacedDigit()
-                .foregroundStyle(tint ?? PaybackTheme.ink)
+                .foregroundStyle(PaybackTheme.ink)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .minimumScaleFactor(0.5)
+                .padding(.top, 6)
+            Text(L10n.t(.investmentCaption))
+                .font(.system(size: 14))
+                .foregroundStyle(PaybackTheme.muted)
+                .padding(.top, 6)
+
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(dailyText)
+                        .font(.system(size: 17, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(PaybackTheme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text(L10n.t(.dailyCostTotal))
+                        .font(.system(size: 13))
+                        .foregroundStyle(PaybackTheme.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(summary.deviceCount)")
+                        .font(.system(size: 17, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(PaybackTheme.ink)
+                    Text(L10n.t(.devicesTracked))
+                        .font(.system(size: 13))
+                        .foregroundStyle(PaybackTheme.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.top, 20)
+
+            if mixed {
+                Text(L10n.t(.mixedCurrencyNote))
+                    .font(.system(size: 14))
+                    .foregroundStyle(PaybackTheme.muted)
+                    .padding(.top, 12)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: PaybackTheme.statCorner, style: .continuous)
-                .fill(hero ? PaybackTheme.earnSoft : PaybackTheme.card)
-        )
+    }
+
+    // Mixed portfolios never show one combined money value: only the
+    // default currency's group is summarized, per the prototype (#23).
+    private var investmentText: String {
+        if let spent = group?.totalSpentMinor {
+            return Money.major(spent, code: currency)
+        }
+        return Money.major(Int64(0), code: currency)
+    }
+
+    private var dailyText: String {
+        if let sum = group?.dailyCostSumMinor {
+            return Money.perDay(sum, code: currency)
+        }
+        return Money.perDay(Double(0), code: currency)
     }
 }
 
 // ---------- device sidebar row ----------
 
-/// Sidebar row: the light identity strip Apple's split views use — the
-/// rich surface (curve, progress, milestones, actions) lives in the detail
-/// pane, one selection away.
+/// Prototype .device-row: linear category icon in a bordered tile, name
+/// and cost/day sub line, goal-met dot on the trailing edge.
 struct SidebarDeviceRow: View {
     let device: Device
+    let selected: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            DeviceIconBadge(icon: device.icon, category: device.category, size: 34)
-
+        HStack(spacing: 12) {
+            DeviceIconTile(category: device.category, selected: selected)
             VStack(alignment: .leading, spacing: 2) {
                 Text(device.name)
-                    .font(.headline)
+                    .font(.system(size: 14, weight: .semibold))
                     .lineLimit(1)
-                Text(Money.perDay(device.computed.costPerDayMinor, code: device.currency))
-                    .font(.caption)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PaybackTheme.ink)
+                Text(subLine)
+                    .font(.system(size: 13))
+                    .foregroundStyle(PaybackTheme.muted)
+                    .lineLimit(2)
             }
-
             Spacer(minLength: 8)
-
-            if device.computed.willingSet {
-                // size/lineWidth are real layout values — a scaleEffect hack
-                // keeps the 46pt canvas and the selected row's clipping
-                // cuts the ring in half
-                AnimatedRing(progress: device.computed.paybackProgress ?? 0,
-                             paidBack: device.computed.paidBack,
-                             size: 26, lineWidth: 3)
-            } else {
-                milestoneEmojis
+            if device.computed.paidBack {
+                Circle()
+                    .fill(PaybackTheme.earn)
+                    .frame(width: 7, height: 7)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(selected ? PaybackTheme.surface : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(selected ? PaybackTheme.line : Color.clear, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
     }
 
-    @ViewBuilder
-    private var milestoneEmojis: some View {
-        let achieved = device.computed.achievedMilestones
-        if !achieved.isEmpty {
-            Text(achieved.suffix(2).map { MilestoneBadge.emoji(for: $0.key) }.joined())
-                .font(.caption2)
-        }
+    private var subLine: String {
+        let cost = Money.perDay(device.computed.costPerDayMinor, code: device.currency)
+        return device.computed.paidBack
+            ? cost + L10n.t(.perDay) + " · " + L10n.t(.paidBack)
+            : cost + L10n.t(.perDay)
     }
 }
 
-/// Rounded emoji tile whose backdrop hue follows the device category.
-struct DeviceIconBadge: View {
-    let icon: String
+/// 40×40 bordered tile with the linear category symbol; selected rows tint
+/// it soft/accent like the prototype's .device-icon.
+struct DeviceIconTile: View {
     let category: String
-    var size: CGFloat = 54
-
-    private var backdrop: Color {
-        switch category {
-        case "computer": return Color.blue.opacity(0.14)
-        case "phone": return Color.teal.opacity(0.14)
-        case "tablet": return Color.indigo.opacity(0.14)
-        case "watch": return Color.mint.opacity(0.18)
-        case "audio": return Color.purple.opacity(0.14)
-        case "camera": return Color.orange.opacity(0.16)
-        case "gaming": return Color.red.opacity(0.13)
-        case "appliance": return Color.cyan.opacity(0.15)
-        case "accessory": return Color.mint.opacity(0.16)
-        default: return PaybackTheme.accentSoft
-        }
-    }
+    var selected: Bool = false
+    var size: CGFloat = 40
 
     var body: some View {
-        Text(icon)
-            .font(.system(size: size * 0.55))
+        Image(systemName: CategoryIcon.symbol(for: category))
+            .font(.system(size: size * 0.45, weight: .regular))
+            .foregroundStyle(selected ? PaybackTheme.accent : PaybackTheme.muted)
             .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).fill(backdrop))
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(selected ? PaybackTheme.soft : PaybackTheme.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(selected ? Color.clear : PaybackTheme.line,
+                                  lineWidth: 1)
+            )
     }
 }
 
-enum MilestoneBadge {
-    static func emoji(for key: String) -> String {
-        switch key {
-        case "days-100": return "🌱"
-        case "days-365": return "📅"
-        case "days-1000": return "🏆"
-        case "cpd-10": return "💸"
-        case "cpd-5": return "🌤"
-        case "cpd-2": return "🍃"
-        case "cpd-1": return "🪶"
-        case "cpd-05": return "✨"
-        case "paid-back": return "🎉"
-        default: return "🏅"
-        }
-    }
+// ---------- empty library ----------
 
-    static func label(for key: String) -> String {
-        switch key {
-        case "days-100": return L10n.t(.milestoneDays100)
-        case "days-365": return L10n.t(.milestoneDays365)
-        case "days-1000": return L10n.t(.milestoneDays1000)
-        case "cpd-10": return L10n.t(.milestoneCpd10)
-        case "cpd-5": return L10n.t(.milestoneCpd5)
-        case "cpd-2": return L10n.t(.milestoneCpd2)
-        case "cpd-1": return L10n.t(.milestoneCpd1)
-        case "cpd-05": return L10n.t(.milestoneCpd05)
-        case "paid-back": return L10n.t(.milestonePaidBack)
-        default: return key
-        }
-    }
+/// The prototype's empty screen (design/prototype/empty.html): box symbol,
+/// title, hint, primary add action, and the worked example line.
+struct EmptyLibraryView: View {
+    @EnvironmentObject private var model: AppModel
 
-    /// compact form for card chips
-    static func shortLabel(for key: String) -> String {
-        switch key {
-        case "days-100": return "100d"
-        case "days-365": return "1y"
-        case "days-1000": return "1000d"
-        case "cpd-10": return "<10"
-        case "cpd-5": return "<5"
-        case "cpd-2": return "<2"
-        case "cpd-1": return "<1"
-        case "cpd-05": return "<0.5"
-        case "paid-back": return L10n.t(.paidBack)
-        default: return key
+    var body: some View {
+        VStack(spacing: 20) {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(PaybackTheme.soft)
+                .frame(width: 80, height: 80)
+                .overlay(
+                    Image(systemName: "shippingbox")
+                        .font(.system(size: 36, weight: .regular))
+                        .foregroundStyle(PaybackTheme.accent)
+                )
+            Text(L10n.t(.emptyTitle))
+                .font(.system(size: 28, weight: .semibold))
+                .kerning(-0.7)
+                .foregroundStyle(PaybackTheme.ink)
+            Text(L10n.t(.emptyHint))
+                .font(.system(size: 15))
+                .foregroundStyle(PaybackTheme.muted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 380)
+            Button {
+                model.beginNewDeviceForm()
+            } label: {
+                Label(L10n.t(.addFirstDevice), systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PaybackTheme.accent)
+            Text(L10n.t(.emptyExample))
+                .font(.system(size: 14))
+                .foregroundStyle(PaybackTheme.muted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 380)
+                .padding(.top, 12)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

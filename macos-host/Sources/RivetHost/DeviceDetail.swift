@@ -1,250 +1,620 @@
 import SwiftUI
 
-// Detail pane: payback math, the milestone ladder, and the cost curve —
-// themed with the Payback design language. Lives in the split view's
-// detail column; its actions live in the window toolbar and the sidebar
-// rows' context menu, keeping this surface pure device.
+// Detail pane per the 2026-11 prototype (design/prototype/app.js
+// renderDetail): device head with actions, the hero (daily cost + personal
+// value goal), the cost curve, milestones, the method explainer, notes.
+// Amounts and derived values come from the engine's computed block; the
+// host only formats and lays out.
 
 struct DeviceDetail: View {
     let device: Device
     let currency: String
+    var onEdit: () -> Void = {}
+    var onDelete: () -> Void = {}
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 14) {
-                    DeviceIconBadge(icon: device.icon, category: device.category)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(device.name).font(.title2.bold())
-                        Text("\(Money.major(device.priceMinor, code: device.currency)) · \(device.purchaseDate)")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if device.computed.paidBack {
-                        HStack(spacing: 4) {
-                            Text("🎉")
-                            Text(L10n.t(.paidBack)).bold()
-                        }
-                        .font(.callout)
-                        .foregroundStyle(PaybackTheme.earn)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(PaybackTheme.earnSoft)
-                        .clipShape(Capsule())
-                    }
+            VStack(alignment: .leading, spacing: 0) {
+                deviceHead
+                hero
+                chartSection
+                bottomGrid
+                if let notes = device.notes, !notes.isEmpty {
+                    notesSection(notes)
                 }
-
-                HStack(spacing: 10) {
-                    StatTile(label: L10n.t(.dailyCost),
-                             value: Money.perDay(device.computed.costPerDayMinor, code: device.currency),
-                             tint: device.computed.paidBack ? PaybackTheme.earn : nil)
-                    StatTile(label: L10n.t(.heldFor),
-                             value: "\(device.computed.daysHeld) \(L10n.t(.days))")
-                    if device.computed.willingSet {
-                        StatTile(label: L10n.t(.willingPerDay),
-                                 value: Money.major(Double(device.willingPerDayMinor ?? 0),
-                                                    code: device.currency))
-                    }
-                }
-
-                CostCurve(priceMinor: device.priceMinor,
-                          daysHeld: Int(device.computed.daysHeld),
-                          currency: currency)
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: PaybackTheme.cardCorner, style: .continuous)
-                            .fill(PaybackTheme.card)
-                    )
-
-                paybackSection
-
-                milestoneLadder
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 40)
+            .padding(.top, 32)
+            .padding(.bottom, 56)
+            .frame(maxWidth: 1120, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .background(PaybackTheme.paper)
     }
 
+    // MARK: head
+
+    private var deviceHead: some View {
+        HStack(alignment: .top, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(CategoryLabel.label(for: device.category)) · "
+                     + L10n.t(.daysTogether)
+                        .replacingOccurrences(of: "{days}",
+                                              with: formattedDays(device.computed.daysHeld)))
+                    .font(.system(size: 13, weight: .semibold))
+                    .kerning(0.6)
+                    .foregroundStyle(PaybackTheme.muted)
+                Text(device.name)
+                    .font(.system(size: 28, weight: .semibold))
+                    .kerning(-0.7)
+                    .foregroundStyle(PaybackTheme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(Money.major(device.priceMinor, code: device.currency)
+                     + " · " + L10n.t(.purchasedOn) + " " + formattedDate(device.purchaseDate))
+                    .font(.system(size: 14))
+                    .foregroundStyle(PaybackTheme.muted)
+            }
+            Spacer(minLength: 16)
+            HStack(spacing: 8) {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 15))
+                }
+                .help(L10n.t(.edit))
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 15))
+                        .foregroundStyle(PaybackTheme.danger)
+                }
+                .help(L10n.t(.delete))
+            }
+        }
+        .padding(.bottom, 32)
+    }
+
+    // MARK: hero
+
+    /// the prototype's .hero: left = today's daily cost, right = the
+    /// personal value goal. Stacks vertically on narrow windows
+    /// (768–1100px contract in DESIGN.md).
+    private var hero: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 32) {
+                heroLeft
+                Divider()
+                heroRight
+            }
+            VStack(alignment: .leading, spacing: 24) {
+                heroLeft
+                Divider()
+                heroRight
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: PaybackTheme.cardCorner, style: .continuous)
+                .fill(PaybackTheme.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: PaybackTheme.cardCorner, style: .continuous)
+                .strokeBorder(PaybackTheme.line, lineWidth: 1)
+        )
+        .padding(.bottom, 24)
+    }
+
+    private var heroLeft: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(L10n.t(.heroDailyLabel))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(PaybackTheme.muted)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(Money.perDay(device.computed.costPerDayMinor, code: device.currency))
+                    .font(.system(size: 52, weight: .semibold))
+                    .kerning(-1.5)
+                    .monospacedDigit()
+                    .foregroundStyle(PaybackTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                Text(L10n.t(.perDay))
+                    .font(.system(size: 16))
+                    .foregroundStyle(PaybackTheme.muted)
+            }
+            .padding(.top, 12)
+            Text(L10n.t(.heroDailyCaption))
+                .font(.system(size: 14))
+                .foregroundStyle(PaybackTheme.muted)
+                .padding(.top, 12)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     @ViewBuilder
-    private var paybackSection: some View {
+    private var heroRight: some View {
         let computed = device.computed
         if computed.willingSet {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    HStack(spacing: 10) {
-                        PaybackRingView(progress: computed.paybackProgress ?? 0,
-                                        paidBack: computed.paidBack,
-                                        size: 38)
-                        Text(L10n.t(.paybackProgress))
-                            .font(.callout.weight(.medium))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(computed.paidBack
+                     ? L10n.t(.goalMetHeading)
+                     : L10n.t(.goalRemainingHeading))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PaybackTheme.muted)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    if computed.paidBack {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 24, weight: .bold))
+                            Text(L10n.t(.paidBack))
+                                .font(.system(size: 32, weight: .semibold))
+                                .kerning(-0.7)
+                        }
+                        .foregroundStyle(PaybackTheme.earn)
+                    } else {
+                        Text(formattedDays(remainingDays))
+                            .font(.system(size: 32, weight: .semibold))
+                            .kerning(-0.7)
+                            .monospacedDigit()
+                            .foregroundStyle(PaybackTheme.accent)
+                        Text(L10n.t(.days))
+                            .font(.system(size: 16))
+                            .foregroundStyle(PaybackTheme.muted)
                     }
-                    Spacer()
-                    Text(computed.paidBack
-                         ? L10n.t(.paidBack)
-                         : String(format: "%.0f%%", (computed.paybackProgress ?? 0) * 100))
-                        .font(.callout.bold())
-                        .monospacedDigit()
-                        .foregroundStyle(computed.paidBack ? PaybackTheme.earn : PaybackTheme.accent)
                 }
-                ProgressView(value: min(computed.paybackProgress ?? 0, 1))
-                    .tint(computed.paidBack ? PaybackTheme.earn : PaybackTheme.accent)
-
-                if computed.paidBack {
-                    if let earned = computed.earnedMinor {
-                        Text("\(L10n.t(.earnedSoFar)) \(Money.major(earned, code: device.currency))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(PaybackTheme.line)
+                        Capsule()
+                            .fill(computed.paidBack ? PaybackTheme.earn : PaybackTheme.accent)
+                            .frame(width: geometry.size.width
+                                   * CGFloat(min(max(computed.paybackProgress ?? 0, 0), 1)))
                     }
-                } else if let eta = computed.paybackEta {
-                    Text("\(L10n.t(.paybackEta)): \(eta)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                }
+                .frame(height: 6)
+                .padding(.top, 16)
+                .accessibilityElement()
+                .accessibilityLabel(Text(L10n.t(.paybackProgress)))
+                .accessibilityValue(Text(String(
+                    format: "%.0f%%", min(max(computed.paybackProgress ?? 0, 0), 1) * 100)))
+                Text(L10n.t(.goalBasedOn)
+                    .replacingOccurrences(
+                        of: "{amount}",
+                        with: Money.major(device.willingPerDayMinor ?? 0,
+                                          code: device.currency)))
+                    .font(.system(size: 14))
+                    .foregroundStyle(PaybackTheme.muted)
+                    .padding(.top, 12)
+                if computed.paidBack, let earned = computed.earnedMinor {
+                    Text(L10n.t(.goalExtra)
+                        .replacingOccurrences(
+                            of: "{amount}",
+                            with: Money.major(max(earned, 0), code: device.currency)))
+                        .font(.system(size: 14))
+                        .foregroundStyle(PaybackTheme.muted)
+                        .padding(.top, 8)
                 }
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: PaybackTheme.cardCorner, style: .continuous)
-                    .fill(computed.paidBack ? PaybackTheme.earnSoft : PaybackTheme.card)
-            )
-        } else {
-            HStack(spacing: 10) {
-                Text("💡")
-                Text(L10n.t(.willingHint))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: PaybackTheme.cardCorner, style: .continuous)
-                    .fill(PaybackTheme.accentSoft)
-            )
+        } else {
+            // no goal set: the prototype's goal-question panel
+            VStack(alignment: .leading, spacing: 0) {
+                Text(L10n.t(.goalMetHeading))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PaybackTheme.muted)
+                Text(L10n.t(.goalQuestion))
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(PaybackTheme.ink)
+                    .padding(.top, 12)
+                Text(L10n.t(.goalSetHint))
+                    .font(.system(size: 14))
+                    .foregroundStyle(PaybackTheme.muted)
+                    .padding(.top, 8)
+                Button(action: onEdit) {
+                    HStack(spacing: 8) {
+                        Text(L10n.t(.setDailyValue))
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(PaybackTheme.accent)
+                .padding(.top, 16)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private var milestoneLadder: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.t(.milestones))
-                .font(.callout.bold())
-            ForEach(device.computed.milestones) { milestone in
-                HStack(spacing: 10) {
-                    Text(MilestoneBadge.emoji(for: milestone.key))
-                        .font(.callout)
-                        .opacity(milestone.achieved ? 1 : 0.3)
-                    Text(MilestoneBadge.label(for: milestone.key))
-                        .font(.callout)
-                        .foregroundStyle(milestone.achieved ? .primary : .secondary)
-                    Spacer()
-                    if milestone.achieved {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(PaybackTheme.earn)
-                    }
-                }
+    /// remaining days to the goal: ⌈price/willing⌉ − held, floored at 0 —
+    /// derived from the engine's own values only (display arithmetic on
+    /// already-computed numbers, mirroring the prototype)
+    private var remainingDays: Int64 {
+        let computed = device.computed
+        guard let eta = computed.paybackEta else { return 0 }
+        return max(0, Self.daysBetween(device.purchaseDate, eta)
+                     - Int64(computed.daysHeld))
+    }
+
+    static func daysBetween(_ from: String, _ to: String) -> Int64 {
+        guard let f = parseDate(from), let t = parseDate(to) else { return 0 }
+        return Int64(Calendar(identifier: .gregorian)
+            .dateComponents([.day], from: f, to: t).day ?? 0)
+    }
+
+    private static func parseDate(_ text: String) -> Date? {
+        let parts = text.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return Calendar(identifier: .gregorian)
+            .date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+    }
+
+    // MARK: chart
+
+    private var chartSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L10n.t(.chartTitle))
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(PaybackTheme.ink)
+                Spacer()
+                Text(L10n.t(.chartSubtitle)
+                    .replacingOccurrences(of: "{days}",
+                                          with: formattedDays(device.computed.daysHeld)))
+                    .font(.system(size: 13))
+                    .foregroundStyle(PaybackTheme.muted)
+            }
+            .padding(.bottom, 20)
+            CostCurve(priceMinor: device.priceMinor,
+                      daysHeld: Int(device.computed.daysHeld))
+                .accessibilityLabel(Text(L10n.t(.chartA11y)
+                    .replacingOccurrences(
+                        of: "{cost}",
+                        with: Money.perDay(device.computed.costPerDayMinor,
+                                           code: device.currency))))
+            HStack {
+                Text(L10n.t(.chartDayOne)
+                    .replacingOccurrences(
+                        of: "{amount}",
+                        with: Money.major(device.priceMinor, code: device.currency)))
+                Spacer()
+                Text(L10n.t(.chartToday)
+                    .replacingOccurrences(
+                        of: "{amount}",
+                        with: Money.perDay(device.computed.costPerDayMinor,
+                                           code: device.currency)))
+            }
+            .font(.system(size: 13))
+            .foregroundStyle(PaybackTheme.muted)
+            .padding(.top, 8)
+            Text(L10n.t(.chartNote))
+                .font(.system(size: 14))
+                .foregroundStyle(PaybackTheme.muted)
+                .padding(.top, 12)
+        }
+        .padding(.bottom, 24)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(PaybackTheme.line)
+                .frame(height: 1)
+        }
+    }
+
+    // MARK: bottom grid
+
+    @ViewBuilder
+    private var bottomGrid: some View {
+        let width: CGFloat = 40
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: width) {
+                milestoneSection.frame(maxWidth: .infinity, alignment: .leading)
+                methodSection.frame(maxWidth: .infinity, alignment: .leading)
+            }
+            VStack(alignment: .leading, spacing: 32) {
+                milestoneSection
+                methodSection
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: PaybackTheme.cardCorner, style: .continuous)
-                .fill(PaybackTheme.card)
-        )
+        .padding(.top, 32)
+    }
+
+    private var milestoneSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(L10n.t(.milestonesTitle))
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(PaybackTheme.ink)
+                Spacer()
+                Text("\(achievedCount) / 3")
+                    .font(.system(size: 14))
+                    .foregroundStyle(PaybackTheme.muted)
+            }
+            .padding(.bottom, 4)
+            // the prototype's ladder: only the three days-together
+            // milestones on the main list; cost thresholds live in the
+            // disclosure below
+            ForEach(dayMilestones, id: \.key) { milestone in
+                MilestoneRow(milestone: milestone,
+                             daysHeld: device.computed.daysHeld)
+            }
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(costMilestones, id: \.key) { milestone in
+                        Text(costMilestoneLine(milestone))
+                            .font(.system(size: 14))
+                            .foregroundStyle(PaybackTheme.muted)
+                    }
+                }
+                .padding(.top, 8)
+            } label: {
+                Text(L10n.t(.costMilestonesTitle))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(PaybackTheme.ink)
+            }
+            .tint(PaybackTheme.accent)
+            .padding(.top, 20)
+        }
+        .padding(.top, 8)
+    }
+
+    private var dayMilestones: [Milestone] {
+        device.computed.milestones.filter { isDayMilestone($0.key) }
+    }
+
+    private var costMilestones: [Milestone] {
+        device.computed.milestones.filter { !isDayMilestone($0.key) }
+    }
+
+    private var achievedCount: Int {
+        device.computed.milestones
+            .filter { isDayMilestone($0.key) && $0.achieved }
+            .count
+    }
+
+    private func isDayMilestone(_ key: String) -> Bool {
+        key.hasPrefix("days-")
+    }
+
+    private func isCostMilestone(_ key: String) -> Bool {
+        key.hasPrefix("cpd-")
+    }
+
+    private func costMilestoneLine(_ milestone: Milestone) -> String {
+        let amount = Self.cpdMilestoneAmount(milestone.key)
+        let threshold = Money.major(Int64(amount * 100), code: device.currency)
+        let status = milestone.achieved
+            ? L10n.t(.milestoneReached)
+            : L10n.t(.costMilestoneNotYet)
+        return status + " · "
+            + L10n.t(.costMilestoneBelow)
+                .replacingOccurrences(of: "{amount}", with: threshold)
+    }
+
+    /// thresholds in major units, matching the engine's cpd ladder
+    /// (cpd-10 = below 10.00 major per day, docs/data-format.md)
+    static func cpdMilestoneAmount(_ key: String) -> Double {
+        switch key {
+        case "cpd-10": return 10
+        case "cpd-5": return 5
+        case "cpd-2": return 2
+        case "cpd-1": return 1
+        case "cpd-05": return 0.5
+        default: return 0
+        }
+    }
+
+    private var methodSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(L10n.t(.methodTitle))
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(PaybackTheme.ink)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.t(.methodIntro1))
+                Text(L10n.t(.methodIntro2))
+            }
+            .font(.system(size: 14))
+            .foregroundStyle(PaybackTheme.muted)
+            .padding(.top, 8)
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.t(.methodCalcDays))
+                    Text(L10n.t(.methodCalcReset))
+                }
+                .font(.system(size: 14))
+                .foregroundStyle(PaybackTheme.muted)
+                .padding(.top, 8)
+            } label: {
+                Text(L10n.t(.methodCalcTitle))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(PaybackTheme.ink)
+            }
+            .tint(PaybackTheme.accent)
+            .padding(.top, 16)
+        }
+        .padding(.top, 8)
+    }
+
+    // MARK: notes
+
+    private func notesSection(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.t(.notesTitle))
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(PaybackTheme.ink)
+            Text(text)
+                .font(.system(size: 14))
+                .foregroundStyle(PaybackTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 32)
+    }
+
+    // MARK: formatting
+
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = L10n.prefersChinese
+            ? Locale(identifier: "zh-CN") : Locale(identifier: "en_US")
+        return formatter
+    }
+
+    private func formattedDate(_ text: String) -> String {
+        guard let date = Self.parseDate(text) else { return text }
+        return dateFormatter.string(from: date)
+    }
+
+    private func formattedDays(_ days: Int64) -> String {
+        let value = Int(days)
+        if L10n.prefersChinese {
+            return NumberFormatter.localizedString(from: NSNumber(value: value),
+                                                   number: .decimal)
+        }
+        return NumberFormatter.localizedString(from: NSNumber(value: value),
+                                               number: .decimal)
     }
 }
 
-// The daily-cost curve: price/day for every day since purchase, with a soft
-// gradient fill. It only ever goes down — that is the whole product.
+// MARK: - milestone row
+
+/// Prototype .milestone: check (reached) or chevron (future), the
+/// days-together label, and the reached/days-to-go suffix.
+struct MilestoneRow: View {
+    let milestone: Milestone
+    let daysHeld: Int64
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if milestone.achieved {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PaybackTheme.earn)
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PaybackTheme.muted)
+            }
+            Text(label)
+                .font(.system(size: 14))
+                .foregroundStyle(milestone.achieved
+                                 ? PaybackTheme.ink : PaybackTheme.muted)
+            Spacer(minLength: 8)
+            Text(suffix)
+                .font(.system(size: 13))
+                .foregroundStyle(milestone.achieved
+                                 ? PaybackTheme.earn : PaybackTheme.muted)
+        }
+    }
+
+    private var label: String {
+        switch milestone.key {
+        case "days-100":
+            return L10n.t(.daysTogether)
+                .replacingOccurrences(of: "{days}", with: "100")
+        case "days-365":
+            return L10n.t(.daysTogether)
+                .replacingOccurrences(of: "{days}", with: "365")
+        case "days-1000":
+            return L10n.t(.daysTogether)
+                .replacingOccurrences(of: "{days}", with: "1,000")
+        case "paid-back":
+            return L10n.t(.milestonePaidBack)
+        default:
+            return MilestoneBadge.label(for: milestone.key)
+        }
+    }
+
+    private var suffix: String {
+        if milestone.achieved { return L10n.t(.milestoneReached) }
+        guard let target = Self.dayTargets[milestone.key], target > 0 else {
+            return L10n.t(.costMilestoneNotYet)
+        }
+        let remaining = max(target - Int(daysHeld), 1)
+        let formatted = NumberFormatter.localizedString(
+            from: NSNumber(value: remaining), number: .decimal)
+        return L10n.t(.milestoneDaysToGo)
+            .replacingOccurrences(of: "{days}", with: formatted)
+    }
+
+    /// day thresholds for the days-together ladder (docs/data-format.md)
+    static let dayTargets: [String: Int] = [
+        "days-100": 100, "days-365": 365, "days-1000": 1000
+    ]
+}
+
+// MARK: - cost curve
+
+/// The daily-cost curve: cost(day) = price / day, normalized against day
+/// one (= the full price), exactly the prototype's mapping
+/// y = top + (1 − 1/day) × span. It only ever falls — that is the product.
 struct CostCurve: View {
     let priceMinor: Int64
     let daysHeld: Int
-    let currency: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(L10n.t(.dailyCost))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(Money.perDay(Double(priceMinor) / Double(max(daysHeld, 1)),
-                                  code: currency))
-                    .font(.caption.bold())
-                    .monospacedDigit()
-                    .foregroundStyle(PaybackTheme.accent)
-            }
-            GeometryReader { geometry in
-                ZStack {
-                    curveFill(width: geometry.size.width, height: geometry.size.height)
-                    curveLine(width: geometry.size.width, height: geometry.size.height)
-                    if let last = curvePoints(width: geometry.size.width,
-                                              height: geometry.size.height).last {
-                        Circle()
-                            .fill(PaybackTheme.accent)
-                            .frame(width: 7, height: 7)
-                            .position(last)
-                    }
+        Canvas { context, size in
+            let insetX: CGFloat = 8
+            let insetY: CGFloat = 8
+            let span = size.height - insetY * 2 - 10
+            let width = size.width - insetX * 2
+
+            // dashed axes: midline + baseline, like the prototype
+            var axis = Path()
+            axis.move(to: CGPoint(x: insetX, y: insetY + span * 0.5))
+            axis.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span * 0.5))
+            axis.move(to: CGPoint(x: insetX, y: insetY + span))
+            axis.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span))
+            context.stroke(axis,
+                           with: .color(PaybackTheme.line),
+                           style: StrokeStyle(lineWidth: 1, dash: [4, 6]))
+
+            // the curve itself
+            let held = max(daysHeld, 1)
+            var line = Path()
+            var fill = Path()
+            let samples = 65
+            for index in 0..<samples {
+                let fraction = Double(index) / Double(samples - 1)
+                let day = 1.0 + fraction * Double(held - 1)
+                let x = insetX + CGFloat(fraction) * width
+                let y = insetY + CGFloat(1 - 1 / day) * span
+                let point = CGPoint(x: x, y: y)
+                if index == 0 {
+                    line.move(to: point)
+                    fill.move(to: point)
+                } else {
+                    line.addLine(to: point)
                 }
             }
-            .frame(height: 64)
-            HStack {
-                Text(L10n.t(.curveDayLabel)
-                    .replacingOccurrences(of: "{day}", with: "1"))
-                Spacer()
-                Text(L10n.t(.curveDayLabel)
-                    .replacingOccurrences(of: "{day}", with: "\(daysHeld)"))
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-        }
-    }
+            fill.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span))
+            fill.addLine(to: CGPoint(x: insetX, y: insetY + span))
+            fill.closeSubpath()
+            context.fill(fill, with: .color(PaybackTheme.soft))
+            context.stroke(line,
+                           with: .color(PaybackTheme.accent),
+                           style: StrokeStyle(lineWidth: 3, lineCap: .round,
+                                              lineJoin: .round))
 
-    private func curvePoints(width: CGFloat, height: CGFloat) -> [CGPoint] {
-        guard daysHeld > 1 else { return [] }
-        let maxDays = max(daysHeld, 30)
-        let maxValue = Double(priceMinor)  // day 1: the whole price
-        return (1...daysHeld).map { day in
-            let x = CGFloat(day - 1) / CGFloat(maxDays - 1) * width
-            let value = Double(priceMinor) / Double(day)
-            // design.md: 「超衰减曲线……永不上扬」 — day 1 sits at the top
-            // (the whole price in one day) and the line decays toward the
-            // bottom as the daily cost falls
-            return CGPoint(x: min(x, width),
-                           y: CGFloat(value / maxValue) * height)
+            // the "today" dot at the curve's end
+            let todayFraction = held > 1 ? 1.0 : 0.0
+            let day = Double(held)
+            let dot = CGPoint(x: insetX + CGFloat(todayFraction) * width,
+                              y: insetY + CGFloat(1 - 1 / day) * span)
+            context.fill(Path.circleIn(dot, radius: 4),
+                         with: .color(PaybackTheme.accent))
         }
+        .frame(height: 180)
     }
+}
 
-    private func curvePath(width: CGFloat, height: CGFloat) -> Path {
+private extension Path {
+    static func circleIn(_ point: CGPoint, radius: CGFloat) -> Path {
         var path = Path()
-        let points = curvePoints(width: width, height: height)
-        for (index, point) in points.enumerated() {
-            if index == 0 {
-                path.move(to: point)
-            } else {
-                path.addLine(to: point)
-            }
-        }
+        path.addEllipse(in: CGRect(x: point.x - radius, y: point.y - radius,
+                                   width: radius * 2, height: radius * 2))
         return path
-    }
-
-    private func curveLine(width: CGFloat, height: CGFloat) -> some View {
-        curvePath(width: width, height: height)
-            .stroke(
-                LinearGradient(colors: [PaybackTheme.accent.opacity(0.5), PaybackTheme.accent],
-                               startPoint: .leading, endPoint: .trailing),
-                style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
-            )
-    }
-
-    private func curveFill(width: CGFloat, height: CGFloat) -> some View {
-        var path = curvePath(width: width, height: height)
-        path.addLine(to: CGPoint(x: width, y: height))
-        path.addLine(to: CGPoint(x: 0, y: height))
-        path.closeSubpath()
-        return path
-            .fill(
-                LinearGradient(colors: [PaybackTheme.accent.opacity(0.22),
-                                        PaybackTheme.accent.opacity(0.02)],
-                               startPoint: .top, endPoint: .bottom)
-            )
     }
 }

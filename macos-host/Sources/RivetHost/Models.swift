@@ -8,6 +8,8 @@ struct LoadAllDocument: Codable {
     let app: AppInfo
     let settings: Settings
     let devices: [Device]
+    /// tombstoned winners currently restorable (2026-11 redesign)
+    let trashCount: Int?
     let summary: Summary
 }
 
@@ -20,17 +22,25 @@ struct AppInfo: Codable {
 
 struct Settings: Codable {
     var currency: String
+    /// per-machine display preferences (2026-11 redesign); "system" follows
+    /// the OS. Optional for decode robustness against older engines.
+    var theme: String?
+    var language: String?
     var updateAutoCheck: Bool
     var updateBaseUrl: String?
     var lastUpdateCheckAt: Int64?
     var rolloutBucket: Int64?
 
     init(currency: String = "CNY",
+         theme: String? = "system",
+         language: String? = "system",
          updateAutoCheck: Bool = true,
          updateBaseUrl: String? = nil,
          lastUpdateCheckAt: Int64? = nil,
          rolloutBucket: Int64? = nil) {
         self.currency = currency
+        self.theme = theme
+        self.language = language
         self.updateAutoCheck = updateAutoCheck
         self.updateBaseUrl = updateBaseUrl
         self.lastUpdateCheckAt = lastUpdateCheckAt
@@ -111,6 +121,9 @@ struct Summary: Codable {
     let totalDaysHeld: Int64
     let avgCostPerDayMinor: Double?
     let earnedTotalMinor: Double?
+    /// Σ per-device daily costs within the single currency (2026-11 redesign);
+    /// null on mixed portfolios
+    let dailyCostSumMinor: Double?
     let paidBackCount: Int
     let currencyGroups: [CurrencyGroup]?
     let bestDeviceId: String?
@@ -118,7 +131,8 @@ struct Summary: Codable {
 
     static let empty = Summary(deviceCount: 0, totalSpentMinor: 0,
                                totalDaysHeld: 0, avgCostPerDayMinor: 0,
-                               earnedTotalMinor: 0, paidBackCount: 0,
+                               earnedTotalMinor: 0, dailyCostSumMinor: 0,
+                               paidBackCount: 0,
                                currencyGroups: nil,
                                bestDeviceId: nil, toughestDeviceId: nil)
 }
@@ -133,6 +147,8 @@ struct CurrencyGroup: Codable {
     let avgCostPerDayMinor: Double
     let earnedTotalMinor: Double
     let paidBackCount: Int
+    /// Σ per-device daily costs in this currency (2026-11 redesign)
+    let dailyCostSumMinor: Double?
 }
 
 // Outgoing payloads. Optional properties encode as absent keys, which the
@@ -153,6 +169,36 @@ struct SettingsPatch: Encodable {
     var currency: String?
     var updateAutoCheck: Bool?
     var updateBaseUrl: String?
+    var theme: String?
+    var language: String?
+}
+
+// ---------- trash, restore, backup (2026-11 redesign) ----------
+
+/// trash-list RPC payload
+struct TrashDocument: Codable {
+    let trash: [Device]
+}
+
+/// backup-validate RPC payload: the restore preview's replace scope
+struct BackupPreferences: Codable, Equatable {
+    let currency: String
+    let theme: String
+    let language: String
+}
+
+struct BackupValidateResult: Codable {
+    let replaceCount: Int
+    let importCount: Int
+    let trashCount: Int
+    let preferences: BackupPreferences
+}
+
+/// backup-restore RPC payload: post-restore counts
+struct BackupRestoreResult: Codable {
+    let devices: Int
+    let trash: Int
+    let preferences: BackupPreferences
 }
 
 struct UpdateCheckResult: Codable {

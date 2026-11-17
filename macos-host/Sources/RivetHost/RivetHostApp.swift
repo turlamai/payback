@@ -38,9 +38,9 @@ struct RivetHostApp: App {
     }
 }
 
-/// UI language preference, persisted independently of the business data:
-/// this is a view concern, so it lives in UserDefaults rather than the
-/// payback.json document.
+/// UI language preference. Since the 2026-11 redesign this lives in the
+/// engine's per-machine settings (docs/data-format.md) so it rides the
+/// backup format; the pre-redesign UserDefaults key migrates on first load.
 enum AppLanguage: String, CaseIterable, Identifiable {
     case system
     case zh
@@ -54,6 +54,53 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .zh: return "中文"
         case .en: return "English"
         }
+    }
+
+    /// engine settings value ("system" | "zh-CN" | "en")
+    var settingsValue: String {
+        switch self {
+        case .system: return "system"
+        case .zh: return "zh-CN"
+        case .en: return "en"
+        }
+    }
+
+    static func from(settingsValue: String?) -> AppLanguage {
+        switch settingsValue {
+        case "zh-CN": return .zh
+        case "en": return .en
+        default: return .system
+        }
+    }
+}
+
+/// Appearance preference (2026-11 redesign): system/light/dark, engine
+/// settings-backed so it rides the backup too.
+enum AppTheme: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .system: return L10n.t(.appearanceSystem)
+        case .light: return L10n.t(.appearanceLight)
+        case .dark: return L10n.t(.appearanceDark)
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
+    static func from(settingsValue: String?) -> AppTheme {
+        AppTheme(rawValue: settingsValue ?? "") ?? .system
     }
 }
 
@@ -81,7 +128,22 @@ struct CelebrationPayload: Identifiable {
     let id = UUID()
     let hits: [MilestoneHit]
 }
-    @Published var quip: String = ""
+    // ---------- trash / undo (2026-11 redesign) ----------
+    /// tombstoned records reported by load-all; drives the settings row
+    @Published var trashCount = 0
+    /// full trash records, loaded on demand for the restore sheet
+    @Published var trash: [Device]?
+    /// the toast line + the undoable deletion behind it
+    @Published var toast: ToastState?
+
+    struct ToastState: Identifiable, Equatable {
+        let id = UUID()
+        let message: String
+        let undoID: String?
+    }
+
+    /// appearance preference, engine settings-backed (2026-11 redesign)
+    @Published var theme: AppTheme = .system
 
     @Published var editingDevice: Device?   // presents DeviceForm for an existing row
     @Published var showingNewDevice = false // presents DeviceForm for a new draft
@@ -229,15 +291,24 @@ struct CelebrationPayload: Identifiable {
     private var syncRevisionSeen: Int64 = -1
     private var syncPollTimer: Timer?
 
-    /// changing this rebuilds the whole view tree, so strings re-resolve
+    /// changing this rebuilds the whole view tree, so strings re-resolve.
+    /// The engine settings are the source of truth (backup contract);
+    /// setLanguage writes there and the reload echoes it back.
     @Published var uiLanguage: AppLanguage {
         didSet {
-            UserDefaults.standard.set(uiLanguage.rawValue, forKey: "payback.uiLanguage")
             L10n.override = uiLanguage == .system ? nil : uiLanguage.rawValue
         }
     }
 
+    /// guards the reload echo: the engine confirm re-enters via reload()
+    private var languageWriteInFlight = false
+    private var themeWriteInFlight = false
+    /// the pre-redesign UserDefaults key migrates into engine settings once
+    private let legacyLanguageKey = "payback.uiLanguage"
+
     init() {
+        // start from the legacy key until the first load-all lands; the
+        // migration below then carries it into engine settings exactly once
         let stored = UserDefaults.standard.string(forKey: "payback.uiLanguage")
             ?? AppLanguage.system.rawValue
         let language = AppLanguage(rawValue: stored) ?? .system
@@ -246,7 +317,56 @@ struct CelebrationPayload: Identifiable {
     }
 
     func setLanguage(_ language: AppLanguage) {
+        guard language != uiLanguage else { return }
         uiLanguage = language
+        languageWriteInFlight = true
+        saveSetting(["language": language.settingsValue])
+    }
+
+    func setTheme(_ theme: AppTheme) {
+        guard theme != self.theme else { return }
+        self.theme = theme
+        themeWriteInFlight = true
+        saveSetting(["theme": theme.rawValue])
+    }
+
+    /// quick toggle for the toolbar: flips light/dark around the current
+    /// effective appearance
+    func toggleAppearance() {
+        let effectiveDark = theme == .dark
+            || (theme == .system && NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+        setTheme(effectiveDark ? .light : .dark)
+    }
+
+    private func saveSetting(_ patch: [String: String]) {
+        guard let api else { return }
+        Task {
+            do {
+                let payload = try JSONEncoder().encode(patch)
+                let data = try await api.save_settings(payload: payload)
+                let settings = try JSONDecoder().decode(Settings.self, from: data)
+                self.settings = settings
+                applyEnginePreferences(settings)
+            } catch {
+                errorAlert = Self.cleanError(error)
+            }
+        }
+    }
+
+    /// engine settings are the display-preference source of truth; the
+    /// in-flight guards keep a user choice from being overwritten by the
+    /// echo of its own save
+    private func applyEnginePreferences(_ settings: Settings) {
+        if !themeWriteInFlight {
+            let engineTheme = AppTheme.from(settingsValue: settings.theme)
+            if engineTheme != theme { theme = engineTheme }
+        }
+        if !languageWriteInFlight {
+            let engineLanguage = AppLanguage.from(settingsValue: settings.language)
+            if engineLanguage != uiLanguage { uiLanguage = engineLanguage }
+        }
+        themeWriteInFlight = false
+        languageWriteInFlight = false
     }
 
     private var backend: EmbeddedRacketBackend?
@@ -292,13 +412,6 @@ struct CelebrationPayload: Identifiable {
 
     // ---------- emotional layer ----------
 
-    /// rotating quip under the summary, changes once a day
-    private func refreshQuip() {
-        let quips = [L10n.Key.quip1, .quip2, .quip3, .quip4, .quip5, .quip6]
-        let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
-        quip = L10n.t(quips[day % quips.count])
-    }
-
     /// celebrate milestones achieved since the last launch
     private func detectCelebrations(in devices: [Device]) {
         var hits: [MilestoneHit] = []
@@ -322,7 +435,6 @@ struct CelebrationPayload: Identifiable {
     /// once-per-day system notification: the payback digest. Permission
     /// denial is remembered and never re-prompted; every failure is silent.
     private func runDailyDigest() {
-        refreshQuip()
         guard let api else { return }
         Task {
             do {
@@ -386,10 +498,32 @@ struct CelebrationPayload: Identifiable {
                 settings = document.settings
                 summary = document.summary
                 appInfo = document.app
+                trashCount = document.trashCount ?? trashCount
                 detectCelebrations(in: document.devices)
+                migrateLegacyLanguage(settings: document.settings)
+                applyEnginePreferences(document.settings)
             } catch {
                 errorAlert = "\(error)"
             }
+        }
+    }
+
+    /// the pre-redesign language choice moves into engine settings once, on
+    /// the first load where the engine still says "system"
+    private func migrateLegacyLanguage(settings: Settings) {
+        guard settings.language == nil || settings.language == "system",
+              let legacy = UserDefaults.standard.string(forKey: legacyLanguageKey),
+              let language = AppLanguage(rawValue: legacy), language != .system
+        else {
+            UserDefaults.standard.removeObject(forKey: legacyLanguageKey)
+            return
+        }
+        UserDefaults.standard.removeObject(forKey: legacyLanguageKey)
+        guard let api else { return }
+        Task {
+            let payload = try? JSONEncoder().encode(["language": language.settingsValue])
+            guard let payload else { return }
+            _ = try? await api.save_settings(payload: payload)
         }
     }
 
@@ -438,10 +572,131 @@ struct CelebrationPayload: Identifiable {
             do {
                 _ = try await api.delete_device(id: device.id)
                 reload()
+                showToast(L10n.t(.toastDeleted), undoID: device.id)
             } catch {
                 errorAlert = Self.cleanError(error)
             }
         }
+    }
+
+    // ---------- trash / undo (docs/data-format.md "Trash") ----------
+
+    /// the toast's 撤销: reinstate the tombstoned record via restore-device
+    func undoDelete() {
+        guard let id = toast?.undoID else { return }
+        toast = nil
+        restoreDevice(id: id, followSelection: true)
+    }
+
+    /// restore from the trash sheet; selection follows only for the toast
+    /// undo (the prototype's 撤销 opens the restored record)
+    func restoreDevice(id: String, followSelection: Bool = false) {
+        guard let api else { return }
+        Task {
+            do {
+                _ = try await api.restore_device(id: id)
+                if followSelection { pendingSelection = id }
+                reload()
+                showToast(L10n.t(.deviceRestored), undoID: nil)
+            } catch {
+                errorAlert = Self.cleanError(error)
+            }
+        }
+    }
+
+    func loadTrash() {
+        guard let api else { return }
+        Task {
+            do {
+                let data = try await api.trash_list()
+                trash = try JSONDecoder().decode(TrashDocument.self, from: data).trash
+            } catch {
+                errorAlert = Self.cleanError(error)
+            }
+        }
+    }
+
+    func showToast(_ message: String, undoID: String?) {
+        toast = ToastState(message: message, undoID: undoID)
+    }
+
+    // ---------- backup (docs/data-format.md "payback.backup") ----------
+
+    @Published var backupPlan: BackupValidateResult?
+    @Published var pendingBackupData: Data?
+    @Published var showRestoreReview = false
+    @Published var restoreError: String?
+
+    /// export: the engine serializes the full document; the host only
+    /// writes it where the user asks
+    func exportBackup() {
+        guard let api else { return }
+        Task {
+            do {
+                let data = try await api.backup_export()
+                let panel = NSSavePanel()
+                panel.nameFieldStringValue = "payback-backup-\(Self.todayStamp()).json"
+                panel.allowedContentTypes = [.json]
+                guard panel.runModal() == .OK, let url = panel.url else { return }
+                try data.write(to: url)
+            } catch {
+                errorAlert = Self.cleanError(error)
+            }
+        }
+    }
+
+    /// validate first (no writes); on success the review sheet presents the
+    /// replace scope for explicit confirmation
+    func beginRestore(from url: URL) {
+        guard let api else { return }
+        Task {
+            do {
+                let data = try Data(contentsOf: url)
+                guard data.count <= 5_000_000 else {
+                    restoreError = L10n.t(.backupTooLarge)
+                    return
+                }
+                let result = try await api.backup_validate(payload: data)
+                pendingBackupData = data
+                backupPlan = try JSONDecoder().decode(BackupValidateResult.self,
+                                                      from: result)
+                restoreError = nil
+                showRestoreReview = true
+            } catch {
+                // engine messages are user-visible; the generic invalid
+                // copy leads, the specific reason follows
+                restoreError = L10n.t(.backupInvalid) + "\n" + Self.cleanError(error)
+            }
+        }
+    }
+
+    func confirmRestore() {
+        guard let api, let data = pendingBackupData else { return }
+        Task {
+            do {
+                _ = try await api.backup_restore(payload: data)
+                pendingBackupData = nil
+                backupPlan = nil
+                showRestoreReview = false
+                reload()
+                showToast(L10n.t(.backupRestored), undoID: nil)
+            } catch {
+                restoreError = Self.cleanError(error)
+            }
+        }
+    }
+
+    func cancelRestoreReview() {
+        pendingBackupData = nil
+        backupPlan = nil
+        showRestoreReview = false
+        restoreError = nil
+    }
+
+    static func todayStamp() -> String {
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        return String(format: "%04d-%02d-%02d",
+                      parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
     // ---------- sync (docs/sync-design.md) ----------

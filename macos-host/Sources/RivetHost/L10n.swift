@@ -154,6 +154,101 @@ enum L10n {
         case syncOpenFolder
         case syncEnableFailed
         case currencyHint
+        case investmentEyebrow
+        case investmentCaption
+        case dailyCostTotal
+        case devicesTracked
+        case mixedCurrencyNote
+        case myDevices
+        case sortDate
+        case openSettingsHelp
+        case toggleAppearance
+        case preferencesBreadcrumb
+        case addFirstDevice
+        case emptyExample
+        case daysTogether
+        case purchasedOn
+        case heroDailyLabel
+        case heroDailyCaption
+        case goalMetHeading
+        case goalRemainingHeading
+        case goalBasedOn
+        case goalExtra
+        case goalQuestion
+        case goalSetHint
+        case setDailyValue
+        case chartTitle
+        case chartSubtitle
+        case chartDayOne
+        case chartToday
+        case chartNote
+        case chartA11y
+        case milestonesTitle
+        case milestoneReached
+        case milestoneDaysToGo
+        case costMilestonesTitle
+        case costMilestoneBelow
+        case costMilestoneNotYet
+        case methodTitle
+        case methodIntro1
+        case methodIntro2
+        case methodCalcTitle
+        case methodCalcDays
+        case methodCalcReset
+        case notesTitle
+        case moveToDeleted
+        case keepDevice
+        case toastDeleted
+        case undo
+        case deviceRestored
+        case trashTitle
+        case trashIntro
+        case trashEmpty
+        case restoreButton
+        case trashRowHelp
+        case trashView
+        case sectionLanguageAppearance
+        case sectionDataRecovery
+        case languageRowHelp
+        case appearanceRowLabel
+        case appearanceRowHelp
+        case appearanceSystem
+        case appearanceLight
+        case appearanceDark
+        case currencyNotConverted
+        case backupExportRow
+        case backupExportHelp
+        case backupExportButton
+        case restoreRow
+        case restoreRowHelp
+        case chooseBackupButton
+        case syncRowLabel
+        case backupCheckTitle
+        case backupCheckBody
+        case restoreReviewTitle
+        case restoreReplacedLabel
+        case restoreImportedLabel
+        case restoreTrashLabel
+        case restorePrefsNote
+        case restoreWarning
+        case restoreConfirm
+        case backupFirst
+        case backupInvalid
+        case backupRestored
+        case backupTooLarge
+        case deviceSaved
+        case preferencesUpdated
+        case goalEnabledLabel
+        case goalSectionTitle
+        case dailyValue
+        case dailyValueHelp
+        case notesOptional
+        case formNameRequired
+        case formPriceRequired
+        case formDateRequired
+        case saveDeviceButton
+        case savingShort
+        case retrySave
 
         var zh: String {
             switch self {
@@ -170,10 +265,10 @@ enum L10n {
             case .addDevice: return "添加设备"
             case .checkUpdatesMenu: return "检查更新…"
             case .helpMenu: return "帮助"
-            case .emptyTitle: return "还没有设备"
-            case .emptyHint: return "添加你的第一台设备，看着它的每日成本一天天降下去。"
+            case .emptyTitle: return "从第一台设备开始"
+            case .emptyHint: return "记下价格和购买日期，看看它的每日成本如何一点点降下来。"
             case .sortBy: return "排序"
-            case .sortAdded: return "加入时间"
+            case .sortAdded: return "加入顺序"
             case .sortDailyCost: return "日均成本"
             case .sortPayback: return "回本进度"
             case .dailyCost: return "每日成本"
@@ -191,7 +286,7 @@ enum L10n {
             case .edit: return "编辑"
             case .delete: return "删除"
             case .deleteConfirmTitle: return "删除这台设备？"
-            case .deleteConfirmText: return "记录删除后无法恢复。"
+            case .deleteConfirmText: return "设备将移到最近删除，记录与目标均可恢复。"
             case .cancel: return "取消"
             case .save: return "保存"
             case .saving: return "保存中…"
@@ -243,9 +338,9 @@ enum L10n {
             case .currency: return "货币"
             case .languageAuto: return "跟随系统"
             case .languageTitle: return "语言"
-            case .digestTitle: return "💰 回本快报"
+            case .digestTitle: return "回本快报"
             case .celebrateTitle: return "值得庆祝的时刻"
-            case .celebrateKeep: return "继续用，继续赚"
+            case .celebrateKeep: return "用得越久，每天越轻。"
             case .quip1: return "每一次打开，都是在赚回当初的决定。"
             case .quip2: return "时间是你最便宜的合伙人。"
             case .quip3: return "今天不用，它也在帮你回本——不，还是用用它吧。"
@@ -258,7 +353,7 @@ enum L10n {
             case .updateInstallFailedBody: return "上次更新安装失败（msiexec 错误 {code}）。当前版本不受影响，可稍后在「检查更新」重试，或到 GitHub Releases 手动下载安装包。"
             case .updateInstallNote: return "下载已完成并通过签名校验。用新版 tar.gz 覆盖应用目录即可完成更新。"
             case .updateOpenFolder: return "打开所在文件夹"
-            case .digestBody: return "已赚回 {earned}，继续用，继续赚。"
+            case .digestBody: return "个人使用价值已超出购买成本 {earned}。"
             case .digestBodyBest: return "{name} 今天只要 {cost}"
             case .aboutMenu: return "关于 Payback"
             case .aboutContent: return "记录电子产品的购买价格，看着每日成本一天天降下去\n用得越久，越接近回本"
@@ -287,6 +382,101 @@ enum L10n {
             case .syncOpenFolder: return "打开文件夹"
             case .syncEnableFailed: return "无法开启同步"
             case .currencyHint: return "新设备的默认货币"
+            case .investmentEyebrow: return "设备投入 · {currency}"
+            case .investmentCaption: return "让每一份投入，都用得值得。"
+            case .dailyCostTotal: return "合计每日成本"
+            case .devicesTracked: return "记录中的设备"
+            case .mixedCurrencyNote: return "仅汇总当前默认货币。每日成本排序按币种分组，不换算汇率。"
+            case .myDevices: return "我的设备"
+            case .sortDate: return "最近购买"
+            case .openSettingsHelp: return "打开设置"
+            case .toggleAppearance: return "切换亮暗主题"
+            case .preferencesBreadcrumb: return "偏好设置"
+            case .addFirstDevice: return "添加第一台设备"
+            case .emptyExample: return "一台 999 元的键盘，用满 1,000 天，每天成本约 1 元。"
+            case .daysTogether: return "已陪伴 {days} 天"
+            case .purchasedOn: return "购于"
+            case .heroDailyLabel: return "现在的每日成本"
+            case .heroDailyCaption: return "每多用一天，成本就再轻一点。"
+            case .goalMetHeading: return "你的回本目标"
+            case .goalRemainingHeading: return "距离回本目标"
+            case .goalBasedOn: return "按每天 {amount} 的个人使用价值计算"
+            case .goalExtra: return "已超出购买成本 {amount}"
+            case .goalQuestion: return "什么价位，你觉得值得？"
+            case .goalSetHint: return "设定每天愿意付的金额，看看何时达到自己的目标。"
+            case .setDailyValue: return "设置每日价值"
+            case .chartTitle: return "成本，一天比一天轻"
+            case .chartSubtitle: return "{days} 天的变化"
+            case .chartDayOne: return "购买当天 · {amount}"
+            case .chartToday: return "今天 · {amount}"
+            case .chartNote: return "每日成本 = 购买价格 ÷ 持有天数"
+            case .chartA11y: return "每日成本随持有时间下降，当前为 {cost}"
+            case .milestonesTitle: return "一路的小里程碑"
+            case .milestoneReached: return "已达成"
+            case .milestoneDaysToGo: return "还差 {days} 天"
+            case .costMilestonesTitle: return "查看成本里程碑"
+            case .costMilestoneBelow: return "日均低于 {amount} / 天"
+            case .costMilestoneNotYet: return "未达成"
+            case .methodTitle: return "怎样理解回本？"
+            case .methodIntro1: return "这里的回本，是达到你心中“用得值得”的目标。"
+            case .methodIntro2: return "它按你设定的每日价值累计，不代表真实收入或转售价值。"
+            case .methodCalcTitle: return "计算方式"
+            case .methodCalcDays: return "回本天数 = 购买价格 ÷ 每日价值，向上取整。持有天数从购买当天算起。"
+            case .methodCalcReset: return "修改每日价值后，将按新标准重新计算全部持有时间。"
+            case .notesTitle: return "设备备注"
+            case .moveToDeleted: return "移到最近删除"
+            case .keepDevice: return "保留设备"
+            case .toastDeleted: return "设备已移到最近删除"
+            case .undo: return "撤销"
+            case .deviceRestored: return "已恢复设备"
+            case .trashTitle: return "最近删除"
+            case .trashIntro: return "恢复后会回到设备库，购买记录和每日价值保持不变。"
+            case .trashEmpty: return "没有待恢复的设备。"
+            case .restoreButton: return "恢复"
+            case .trashRowHelp: return "{count} 台设备可恢复；不会自动清空。"
+            case .trashView: return "查看与恢复"
+            case .sectionLanguageAppearance: return "语言与外观"
+            case .sectionDataRecovery: return "数据与恢复"
+            case .languageRowHelp: return "切换全部界面与日期、金额格式，设备名称及备注保持原文。"
+            case .appearanceRowLabel: return "外观"
+            case .appearanceRowHelp: return "选择舒适的阅读方式。"
+            case .appearanceSystem: return "跟随系统"
+            case .appearanceLight: return "浅色"
+            case .appearanceDark: return "深色"
+            case .currencyNotConverted: return "用于新增与汇总；已有记录不换算。"
+            case .backupExportRow: return "备份导出"
+            case .backupExportHelp: return "导出设备、最近删除与偏好设置。"
+            case .backupExportButton: return "导出 JSON"
+            case .restoreRow: return "从备份恢复"
+            case .restoreRowHelp: return "先校验文件并展示替换范围，确认后再恢复。"
+            case .chooseBackupButton: return "选择备份"
+            case .syncRowLabel: return "跨设备同步"
+            case .backupCheckTitle: return "检查备份"
+            case .backupCheckBody: return "正在读取并校验备份…"
+            case .restoreReviewTitle: return "确认恢复备份"
+            case .restoreReplacedLabel: return "当前设备将被替换"
+            case .restoreImportedLabel: return "备份中的设备"
+            case .restoreTrashLabel: return "可恢复的删除记录"
+            case .restorePrefsNote: return "语言、外观与默认货币也会恢复。"
+            case .restoreWarning: return "恢复会替换当前记录。建议先导出当前备份再继续。"
+            case .restoreConfirm: return "确认恢复"
+            case .backupFirst: return "先备份当前数据"
+            case .backupInvalid: return "备份格式、版本或记录不合法，未更改当前数据。"
+            case .backupRestored: return "备份已恢复"
+            case .backupTooLarge: return "备份不能超过 5 MB，当前数据未改变。"
+            case .deviceSaved: return "设备已保存"
+            case .preferencesUpdated: return "偏好已更新"
+            case .goalEnabledLabel: return "设置每天愿意付的金额"
+            case .goalSectionTitle: return "你的回本目标"
+            case .dailyValue: return "每日价值"
+            case .dailyValueHelp: return "例如每天 2 元。累计使用价值达到购买价格时，视为回本。"
+            case .notesOptional: return "添加备注（可选）"
+            case .formNameRequired: return "设备名称 · 必填"
+            case .formPriceRequired: return "购买价格 · 必填"
+            case .formDateRequired: return "购买日期 · 必填"
+            case .saveDeviceButton: return "保存设备"
+            case .savingShort: return "正在保存…"
+            case .retrySave: return "重试保存"
             }
         }
 
@@ -297,7 +487,7 @@ enum L10n {
             case .backendError: return "Backend error"
             case .configError: return "Configuration error"
             case .appName: return "Payback"
-            case .tagline: return "The longer you keep it, the more it pays back"
+            case .tagline: return "The longer you keep it, the closer to your goal"
             case .totalSpent: return "Total spent"
             case .earnedBack: return "Earned back"
             case .deviceCount: return "devices"
@@ -305,8 +495,8 @@ enum L10n {
             case .addDevice: return "Add Device"
             case .checkUpdatesMenu: return "Check for Updates…"
             case .helpMenu: return "Help"
-            case .emptyTitle: return "No devices yet"
-            case .emptyHint: return "Add your first device and watch its daily cost drop day by day."
+            case .emptyTitle: return "Start with your first device"
+            case .emptyHint: return "Record its price and purchase date, and watch its daily cost fall over time."
             case .sortBy: return "Sort"
             case .sortAdded: return "Date added"
             case .sortDailyCost: return "Daily cost"
@@ -315,8 +505,8 @@ enum L10n {
             case .perDay: return "/day"
             case .heldFor: return "Held for"
             case .days: return "days"
-            case .paidBack: return "Paid back"
-            case .paybackProgress: return "Payback progress"
+            case .paidBack: return "Goal met"
+            case .paybackProgress: return "Value goal progress"
             case .paybackEta: return "Break-even expected"
             case .earnedSoFar: return "Value gained beyond your price"
             case .stillToEarn: return "Remaining"
@@ -326,7 +516,7 @@ enum L10n {
             case .edit: return "Edit"
             case .delete: return "Delete"
             case .deleteConfirmTitle: return "Delete this device?"
-            case .deleteConfirmText: return "This cannot be undone."
+            case .deleteConfirmText: return "The device moves to Recently deleted. Its record and goal can be restored."
             case .cancel: return "Cancel"
             case .save: return "Save"
             case .saving: return "Saving…"
@@ -378,9 +568,9 @@ enum L10n {
             case .currency: return "Currency"
             case .languageAuto: return "Auto"
             case .languageTitle: return "Language"
-            case .digestTitle: return "💰 Payback digest"
+            case .digestTitle: return "Payback digest"
             case .celebrateTitle: return "A moment worth celebrating"
-            case .celebrateKeep: return "Keep using, keep earning"
+            case .celebrateKeep: return "More days. Less per day."
             case .quip1: return "Every open is another step toward payback."
             case .quip2: return "Time is your cheapest business partner."
             case .quip3: return "It pays back even idle — but go use it anyway."
@@ -393,7 +583,7 @@ enum L10n {
             case .updateInstallFailedBody: return "The last update did not install (msiexec error {code}). This version is unaffected — retry from Check Updates later, or download the installer from GitHub Releases."
             case .updateInstallNote: return "The download is verified. Extract the new tar.gz over the app directory to finish the update."
             case .updateOpenFolder: return "Open folder"
-            case .digestBody: return "Earned back {earned}. Keep using, keep earning."
+            case .digestBody: return "Your personal value is now {earned} beyond what you paid."
             case .digestBodyBest: return "{name} costs just {cost} today"
             case .aboutMenu: return "About Payback"
             case .aboutContent: return "Log what your devices cost and watch the daily price drop\nThe longer you keep them, the more they pay back"
@@ -422,6 +612,101 @@ enum L10n {
             case .syncOpenFolder: return "Open Folder"
             case .syncEnableFailed: return "Couldn't Enable Sync"
             case .currencyHint: return "Default currency for new devices"
+            case .investmentEyebrow: return "Device investment · {currency}"
+            case .investmentCaption: return "Make every purchase worth keeping."
+            case .dailyCostTotal: return "Daily cost total"
+            case .devicesTracked: return "Devices tracked"
+            case .mixedCurrencyNote: return "Totals use the default currency. Daily costs are sorted within each currency, without conversion."
+            case .myDevices: return "My devices"
+            case .sortDate: return "Newest purchase"
+            case .openSettingsHelp: return "Open settings"
+            case .toggleAppearance: return "Toggle light and dark appearance"
+            case .preferencesBreadcrumb: return "Preferences"
+            case .addFirstDevice: return "Add your first device"
+            case .emptyExample: return "A CNY 999 keyboard costs about CNY 1 a day after 1,000 days."
+            case .daysTogether: return "{days} days together"
+            case .purchasedOn: return "Purchased"
+            case .heroDailyLabel: return "Your daily cost today"
+            case .heroDailyCaption: return "Another day of use. A little less per day."
+            case .goalMetHeading: return "Your personal value goal"
+            case .goalRemainingHeading: return "Until your value goal"
+            case .goalBasedOn: return "Based on your personal value of {amount} per day"
+            case .goalExtra: return "Personal value beyond purchase cost: {amount}"
+            case .goalQuestion: return "What feels worth it to you?"
+            case .goalSetHint: return "Set what you would pay per day to see when your purchase feels worthwhile."
+            case .setDailyValue: return "Set daily value"
+            case .chartTitle: return "Less per day, every day"
+            case .chartSubtitle: return "{days} days of ownership"
+            case .chartDayOne: return "Day one · {amount}"
+            case .chartToday: return "Today · {amount}"
+            case .chartNote: return "Daily cost = purchase price ÷ days owned"
+            case .chartA11y: return "Daily cost decreases with ownership time. Current cost: {cost}"
+            case .milestonesTitle: return "Small milestones"
+            case .milestoneReached: return "Reached"
+            case .milestoneDaysToGo: return "{days} days to go"
+            case .costMilestonesTitle: return "See daily cost milestones"
+            case .costMilestoneBelow: return "Below {amount}/day"
+            case .costMilestoneNotYet: return "Not yet"
+            case .methodTitle: return "What does “goal met” mean?"
+            case .methodIntro1: return "Your goal is reached when the accumulated personal value matches what you paid."
+            case .methodIntro2: return "It uses the daily value you set. It is not income or resale value."
+            case .methodCalcTitle: return "How it is calculated"
+            case .methodCalcDays: return "Days to goal = purchase price ÷ daily value, rounded up. The purchase date counts as day one."
+            case .methodCalcReset: return "Changing daily value recalculates the whole ownership period."
+            case .notesTitle: return "Device notes"
+            case .moveToDeleted: return "Move to deleted"
+            case .keepDevice: return "Keep device"
+            case .toastDeleted: return "Device moved to Recently deleted"
+            case .undo: return "Undo"
+            case .deviceRestored: return "Device restored"
+            case .trashTitle: return "Recently deleted"
+            case .trashIntro: return "Restored devices return to your library with their original purchase details and daily value."
+            case .trashEmpty: return "No devices to restore."
+            case .restoreButton: return "Restore"
+            case .trashRowHelp: return "{count} devices can be restored. Nothing is purged automatically."
+            case .trashView: return "View & restore"
+            case .sectionLanguageAppearance: return "Language & appearance"
+            case .sectionDataRecovery: return "Data & recovery"
+            case .languageRowHelp: return "Updates the interface and formatting. Device names and notes stay as entered."
+            case .appearanceRowLabel: return "Appearance"
+            case .appearanceRowHelp: return "Choose what feels comfortable to read."
+            case .appearanceSystem: return "System default"
+            case .appearanceLight: return "Light"
+            case .appearanceDark: return "Dark"
+            case .currencyNotConverted: return "Used for new devices and totals. Existing amounts are not converted."
+            case .backupExportRow: return "Export backup"
+            case .backupExportHelp: return "Includes devices, deleted records, and preferences."
+            case .backupExportButton: return "Export JSON"
+            case .restoreRow: return "Restore backup"
+            case .restoreRowHelp: return "Validate the file and review what will be replaced before restoring."
+            case .chooseBackupButton: return "Choose backup"
+            case .syncRowLabel: return "Cross-device sync"
+            case .backupCheckTitle: return "Checking backup"
+            case .backupCheckBody: return "Reading and validating the backup…"
+            case .restoreReviewTitle: return "Review backup restore"
+            case .restoreReplacedLabel: return "Current devices replaced"
+            case .restoreImportedLabel: return "Devices in backup"
+            case .restoreTrashLabel: return "Deleted records included"
+            case .restorePrefsNote: return "Language, appearance, and default currency will also be restored."
+            case .restoreWarning: return "Restoring replaces current records. Export your current data before proceeding."
+            case .restoreConfirm: return "Restore backup"
+            case .backupFirst: return "Back up current data"
+            case .backupInvalid: return "The backup format, version, or records are invalid. Your data has not changed."
+            case .backupRestored: return "Backup restored"
+            case .backupTooLarge: return "Backups must be 5 MB or smaller. Your data has not changed."
+            case .deviceSaved: return "Device saved"
+            case .preferencesUpdated: return "Preferences updated"
+            case .goalEnabledLabel: return "Set what you would pay per day"
+            case .goalSectionTitle: return "Your personal value goal"
+            case .dailyValue: return "Daily value"
+            case .dailyValueHelp: return "For example, 2 units per day. Your goal is met when accumulated value reaches the purchase price."
+            case .notesOptional: return "Notes (optional)"
+            case .formNameRequired: return "Device name · required"
+            case .formPriceRequired: return "Purchase price · required"
+            case .formDateRequired: return "Purchase date · required"
+            case .saveDeviceButton: return "Save device"
+            case .savingShort: return "Saving…"
+            case .retrySave: return "Retry save"
             }
         }
     }

@@ -150,6 +150,9 @@
   (check-equal? (hash-ref summary 'totalDaysHeld) 465)
   (check-equal? (hash-ref summary 'paidBackCount) 1)
   (check-equal? (hash-ref summary 'earnedTotalMinor) 0.0)
+  ;; the redesign sidebar's 合计每日成本: Σ per-device daily costs — the
+  ;; average (total spent / total days) is deliberately different
+  (check-equal? (hash-ref summary 'dailyCostSumMinor) 1100.0)
   (check-equal? (hash-ref summary 'bestDeviceId) "d-b")
   (check-equal? (hash-ref summary 'toughestDeviceId) "d-a"))
 
@@ -204,6 +207,7 @@
   (check-equal? (hash-ref cny 'totalSpentMinor) 10000)
   (check-equal? (hash-ref cny 'totalDaysHeld) 10)
   (check-equal? (hash-ref cny 'avgCostPerDayMinor) 1000.0)
+  (check-equal? (hash-ref cny 'dailyCostSumMinor) 1000.0)
   (check-equal? (hash-ref cny 'deviceCount) 1))
 
 (test-case "mixed currencies with no willing price still group earned"

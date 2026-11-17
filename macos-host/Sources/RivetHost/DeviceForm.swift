@@ -116,7 +116,7 @@ struct DeviceForm: View {
             return String(String.UnicodeScalarView(scalars))
         }
 
-        // The backend contract is yyyy-MM-dd within 1990-01-01…today
+        // The backend contract is yyyy-MM-dd within 1900-01-01…today
         // (docs/data-format.md). The field is plain text, so accept the
         // shapes people actually type: 2026-10-15, 2026/10/15, 2026.10.15,
         // 20261015, 2026年10月15日. Returns the canonical yyyy-MM-dd form.
@@ -144,7 +144,7 @@ struct DeviceForm: View {
             let date = Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
             let back = date.map { Calendar.current.dateComponents([.year, .month, .day], from: $0) }
             guard back?.year == y, back?.month == m, back?.day == d else { return nil }
-            guard y >= 1990 else { return nil }
+            guard y >= 1900 else { return nil }
             let today = Calendar.current.dateComponents([.year, .month, .day], from: Date())
             guard (y, m, d) <= (today.year ?? y, today.month ?? m, today.day ?? d) else {
                 return nil
@@ -200,14 +200,15 @@ struct DeviceForm: View {
 
     private let icons = ["💻", "📱", "🖥", "⌚️", "🎧", "🔊", "📷", "🎮",
                          "📺", "⌨️", "🖱", "🖊", "🖨", "🚲", "📦"]
-    private let categories: [(String, L10n.Key)] = [
-        ("computer", .categoryComputer), ("phone", .categoryPhone),
-        ("tablet", .categoryTablet), ("watch", .categoryWatch),
-        ("audio", .categoryAudio),
-        ("camera", .categoryCamera), ("gaming", .categoryGaming),
-        ("appliance", .categoryAppliance), ("accessory", .categoryAccessory),
-        ("other", .categoryOther)
-    ]
+
+    /// the prototype's seven display options mapped onto engine values;
+    /// a legacy category (watch/camera/gaming) keeps its own entry so a
+    /// save never silently rewrites it (declared in DESIGN.md)
+    private var categoryOptions: [(value: String, key: L10n.Key)] {
+        draft.id == nil
+            ? CategoryLabel.formOptions
+            : CategoryLabel.editOptions(for: draft.category)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -217,7 +218,7 @@ struct DeviceForm: View {
 
             Form {
                 Section {
-                    TextField(L10n.t(.name), text: $form.name)
+                    TextField(L10n.t(.formNameRequired), text: $form.name)
 
                     Picker(L10n.t(.icon), selection: $form.icon) {
                         ForEach(uniqueIcons, id: \.self) { icon in
@@ -226,8 +227,8 @@ struct DeviceForm: View {
                     }
 
                     Picker(L10n.t(.category), selection: $form.category) {
-                        ForEach(categories, id: \.0) { category in
-                            Text(L10n.t(category.1)).tag(category.0)
+                        ForEach(categoryOptions, id: \.value) { option in
+                            Text(L10n.t(option.key)).tag(option.value)
                         }
                     }
                 }
@@ -265,7 +266,7 @@ struct DeviceForm: View {
                 }
 
                 Section {
-                    Toggle(L10n.t(.willingLabel), isOn: $form.willingEnabled)
+                    Toggle(L10n.t(.goalEnabledLabel), isOn: $form.willingEnabled)
                     if form.willingEnabled {
                         HStack {
                             TextField("0.00", text: $form.willingText)
@@ -276,16 +277,18 @@ struct DeviceForm: View {
                         }
                         .contentShape(Rectangle())
                         .onTapGesture { willingFieldFocused = true }
+                        Text(L10n.t(.dailyValueHelp))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         if willingInvalid {
                             hint(L10n.t(.priceRequiredHint))
                         }
                     }
-                    Text(L10n.t(.willingHint))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                } header: {
+                    Text(L10n.t(.goalSectionTitle))
                 }
 
-                Section(L10n.t(.notes)) {
+                Section(L10n.t(.notesOptional)) {
                     TextField("", text: $form.notes, axis: .vertical)
                         .lineLimit(2...4)
                 }
@@ -313,7 +316,7 @@ struct DeviceForm: View {
                 .keyboardShortcut(.cancelAction)
                 .disabled(saving)  // the outcome must be known before leaving
                 Spacer()
-                Button(failed ? L10n.t(.retry) : L10n.t(.save)) {
+                Button(failed ? L10n.t(.retrySave) : L10n.t(.saveDeviceButton)) {
                     save()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -465,7 +468,7 @@ private struct DateCalendarPopover: View {
     // typing a complete year (or month) jumps the calendar; partial input
     // stays untouched because it cannot parse into the valid range
     private func steerIfValid() {
-        guard let y = Int(yearText), (1990...9999).contains(y),
+        guard let y = Int(yearText), (1900...9999).contains(y),
               let m = Int(monthText), (1...12).contains(m) else { return }
         let calendar = Calendar.current
         let day = min(calendar.component(.day, from: visible),

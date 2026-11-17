@@ -13,8 +13,9 @@ struct CelebrationView: View {
                 ConfettiBurst().frame(height: 150)
                 VStack(spacing: 6) {
                     ForEach(hits.prefix(3)) { hit in
-                        Text(MilestoneBadge.emoji(for: hit.key))
-                            .font(.system(size: 40))
+                        Image(systemName: MilestoneBadge.symbol(for: hit.key))
+                            .font(.system(size: 36, weight: .regular))
+                            .foregroundStyle(PaybackTheme.accent)
                     }
                 }
             }
@@ -25,6 +26,7 @@ struct CelebrationView: View {
                 ForEach(hits) { hit in
                     HStack(spacing: 8) {
                         Text(hit.icon)
+                            .font(.callout)
                         Text(hit.deviceName).font(.callout.weight(.medium))
                         Text(MilestoneBadge.label(for: hit.key))
                             .font(.callout)
@@ -38,7 +40,7 @@ struct CelebrationView: View {
                 }
             }
 
-            Text(L10n.t(.quip2))
+            Text(L10n.t(.tagline))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

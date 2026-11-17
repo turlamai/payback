@@ -211,6 +211,7 @@ code plus the `theme`/`language` enums.
   "totalDaysHeld": 2341,
   "avgCostPerDayMinor": 1836.7,
   "earnedTotalMinor": 152300.0,
+  "dailyCostSumMinor": 8360.4,
   "paidBackCount": 2,
   "currencyGroups": [
     {
@@ -220,7 +221,8 @@ code plus the `theme`/`language` enums.
       "totalDaysHeld": 2331,
       "avgCostPerDayMinor": 1801.7,
       "earnedTotalMinor": 152300.0,
-      "paidBackCount": 2
+      "paidBackCount": 2,
+      "dailyCostSumMinor": 8050.4
     }
   ],
   "bestDeviceId": "d-…",
@@ -229,7 +231,12 @@ code plus the `theme`/`language` enums.
 ```
 
 `avgCostPerDayMinor` = total spent / total days held across all devices.
-`earnedTotalMinor` sums the positive `earnedMinor` values — 「已赚回」.
+`dailyCostSumMinor` = Σ per-device `costPerDayMinor` within the group —
+the sidebar's 合计每日成本, deliberately distinct from the average
+(2026-11 redesign).
+`earnedTotalMinor` sums the positive `earnedMinor` values. It stays the
+engine's name for the wire; hosts frame it as personal value beyond the
+purchase cost per the new contract (no 「已赚回」 copy).
 `bestDeviceId` / `toughestDeviceId` have the lowest / highest daily cost
 (`null` when there are no devices).
 

@@ -169,7 +169,7 @@
 (define (currency-groups devices computed-list)
   (define zero-group
     (hasheq 'deviceCount 0 'totalSpentMinor 0 'totalDaysHeld 0
-            'earnedTotalMinor 0 'paidBackCount 0))
+            'earnedTotalMinor 0 'paidBackCount 0 'dailyCostSumMinor 0.0))
   ;; equal-based from the start: currencies arrive as JSON strings, and an
   ;; eq? accumulator would give every parsed copy its own group
   (define by-code
@@ -191,16 +191,26 @@
                                 (if (and (real? e) (>= e 0)) e 0))
                              'paidBackCount
                              (+ (hash-ref g 'paidBackCount)
-                                (if (hash-ref c 'paidBack) 1 0))))
+                                (if (hash-ref c 'paidBack) 1 0))
+                             ;; the sidebar's 合计每日成本: Σ per-device
+                             ;; daily costs — deliberately NOT the
+                             ;; portfolio average below, which divides
+                             ;; total spent by total days
+                             'dailyCostSumMinor
+                             (+ (hash-ref g 'dailyCostSumMinor)
+                                (hash-ref c 'costPerDayMinor))))
                    zero-group)))
   (for/list ([code (in-list (sort (hash-keys by-code) string<?))])
     (define g (hash-ref by-code code))
     (define days (hash-ref g 'totalDaysHeld))
-    (hash-set (hash-set g 'currency code)
-              'avgCostPerDayMinor
-              (if (zero? days)
-                  0.0
-                  (exact->inexact (/ (hash-ref g 'totalSpentMinor) days))))))
+    (hash-set* g
+               'currency code
+               'avgCostPerDayMinor
+               (if (zero? days)
+                   0.0
+                   (exact->inexact (/ (hash-ref g 'totalSpentMinor) days)))
+               'dailyCostSumMinor
+               (exact->inexact (hash-ref g 'dailyCostSumMinor)))))
 
 (define (summary-from devices computed-list)
   (define total-spent
@@ -230,6 +240,10 @@
               (if mixed? 'null 0.0)
               (exact->inexact (/ total-spent total-days)))
           'earnedTotalMinor (if mixed? 'null (exact->inexact earned-total))
+          'dailyCostSumMinor
+          (exact->inexact
+           (for/sum ([c (in-list computed-list)])
+             (hash-ref c 'costPerDayMinor)))
           'paidBackCount paid-back-count
           'currencyGroups groups
           'bestDeviceId (if (null? ranked) 'null (car (argmin cdr ranked)))

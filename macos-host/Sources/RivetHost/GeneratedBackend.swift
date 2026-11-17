@@ -61,6 +61,18 @@ public struct RivetAPI: Sendable {
         let rivetResult = try await client.call("add-device", arguments: [encode_Bytes(payload)])
         return try decode_Bytes(rivetResult)
     }
+    public func backup_export() async throws -> Data {
+        let rivetResult = try await client.call("backup-export", arguments: [])
+        return try decode_Bytes(rivetResult)
+    }
+    public func backup_restore(payload: Data) async throws -> Data {
+        let rivetResult = try await client.call("backup-restore", arguments: [encode_Bytes(payload)])
+        return try decode_Bytes(rivetResult)
+    }
+    public func backup_validate(payload: Data) async throws -> Data {
+        let rivetResult = try await client.call("backup-validate", arguments: [encode_Bytes(payload)])
+        return try decode_Bytes(rivetResult)
+    }
     public func check_updates(force: Bool) async throws -> Data {
         let rivetResult = try await client.call("check-updates", arguments: [encode_Bool(force)])
         return try decode_Bytes(rivetResult)
@@ -85,6 +97,10 @@ public struct RivetAPI: Sendable {
         let rivetResult = try await client.call("rename-machine", arguments: [encode_Bytes(payload)])
         return try decode_Bytes(rivetResult)
     }
+    public func restore_device(id: String) async throws -> Data {
+        let rivetResult = try await client.call("restore-device", arguments: [encode_String(id)])
+        return try decode_Bytes(rivetResult)
+    }
     public func save_settings(payload: Data) async throws -> Data {
         let rivetResult = try await client.call("save-settings", arguments: [encode_Bytes(payload)])
         return try decode_Bytes(rivetResult)
@@ -95,6 +111,10 @@ public struct RivetAPI: Sendable {
     }
     public func sync_state() async throws -> Data {
         let rivetResult = try await client.call("sync-state", arguments: [])
+        return try decode_Bytes(rivetResult)
+    }
+    public func trash_list() async throws -> Data {
+        let rivetResult = try await client.call("trash-list", arguments: [])
         return try decode_Bytes(rivetResult)
     }
     public func update_device(payload: Data) async throws -> Data {
