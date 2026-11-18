@@ -6,6 +6,8 @@
 #include "GeneratedBackend.hpp"
 #include "HostHelpers.h"
 
+#include "winrt/Windows.Storage.Pickers.h"  // backup save/open pickers
+
 #include <cmath>
 #include <stdexcept>
 
@@ -1475,7 +1477,7 @@ void MainWindow::DeleteDeviceAsync(std::wstring id) {
     rivet_app::API api(*backend);
     (void)api.delete_device_async(
         wide_to_utf8(id),
-        [dispatcher, weak](rivet_app::Result<void> result) {
+        [dispatcher, weak, id](rivet_app::Result<void> result) {
           std::string failure;
           try {
             result.get();
