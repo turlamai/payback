@@ -523,6 +523,10 @@ struct CurrencyGroup {
   gint64 total_spent_minor{0};
   double earned_total_minor{0.0};
   double avg_cost_per_day_minor{0.0};
+  // the sidebar's 合计每日成本: Σ per-device daily costs (2026-11
+  // redesign) — deliberately NOT avg_cost_per_day_minor, which divides
+  // total spent by total days
+  double daily_cost_sum_minor{0.0};
 };
 
 struct Document {
@@ -532,7 +536,9 @@ struct Document {
   gint64 total_spent_minor{0};
   double earned_total_minor{0.0};
   double avg_cost_per_day_minor{0.0};
+  double daily_cost_sum_minor{0.0};
   int device_count{0};
+  int trash_count{0};
   // mixed portfolios: the combined money scalars above are null and the
   // summary tiles render these groups instead (issue #23)
   std::vector<CurrencyGroup> currency_groups;
@@ -560,14 +566,13 @@ struct AppState {
   GtkWindow* window{nullptr};
 
   GtkLabel* total_spent{nullptr};
-  GtkLabel* earned_back{nullptr};
-  GtkLabel* overall_daily{nullptr};
+  GtkLabel* daily_total{nullptr};
   GtkLabel* device_count{nullptr};
-  GtkLabel* quip{nullptr};
-  GtkLabel* total_spent_label{nullptr};
-  GtkLabel* earned_back_label{nullptr};
-  GtkLabel* overall_daily_label{nullptr};
-  GtkLabel* device_count_label{nullptr};
+  GtkLabel* investment_eyebrow{nullptr};
+  GtkLabel* summary_caption{nullptr};
+  GtkLabel* daily_total_label{nullptr};
+  GtkLabel* devices_tracked_label{nullptr};
+  GtkLabel* mixed_note{nullptr};
 
   GtkRevealer* status_bar{nullptr};
   GtkLabel* status_label{nullptr};
@@ -628,11 +633,17 @@ struct AppState {
   Document document;
   SyncSnapshot sync;
   std::string selected_id;  // "" falls back to the first device (mac parity)
-  int sort_mode{0};  // 0 added, 1 daily cost, 2 payback progress
-  int quip_day{1};
+  // 0 added (the engine's merged order), 1 newest purchase, 2 daily cost
+  // per-currency grouped, same-group descending (design/DESIGN.md)
+  int sort_mode{0};
   bool auto_check_done{false};
   bool celebration_open{false};
   bool dark_theme{false};  // cairo draw funcs cannot read css classes
+
+  // trash / undo / backup (docs/data-format.md, 2026-11 redesign)
+  std::vector<DeviceRow> trash;
+  std::string last_deleted_id;  // "" = no undoable deletion
+  GtkButton* undo_button{nullptr};
 };
 
 AppState g_state;
@@ -650,6 +661,18 @@ void run_daily_digest();
 void maybe_celebrate();
 void open_settings_dialog();
 void update_sync_dialog_rows();
+// 2026-11 redesign helpers (definitions live below render_detail_pane)
+std::string replace_all_copy(std::string text, std::string const& from,
+                             std::string const& to);
+std::int64_t remaining_goal_days(DeviceRow const& row);
+std::string format_days(std::int64_t days);
+double cpd_threshold_major(std::string const& key);
+std::string category_display_name(std::string const& category);
+void restore_device_async(std::string const& id, bool follow_selection);
+void load_trash_async(bool show_after);
+void show_trash_dialog();
+void export_backup_async();
+void restore_backup_async();
 void request_sync_state();
 void on_sync_machine_entry_changed(GtkEditable* editable, gpointer user_data);
 void begin_enable_sync();
@@ -711,23 +734,6 @@ std::string milestone_label(std::string const& key) {
   return key;
 }
 
-std::string daily_quip(int day_index) {
-  payback::linux_strings::Strings const s = strings();
-  std::string const quips[] = {s.quip1(), s.quip2(), s.quip3(),
-                               s.quip4(), s.quip5(), s.quip6()};
-  int const index = day_index % 6;
-  return quips[index < 0 ? index + 6 : index];
-}
-
-void apply_quip() {
-  if (g_state.document.devices.empty()) {
-    gtk_label_set_text(g_state.quip, "");
-    return;
-  }
-  gtk_label_set_text(g_state.quip,
-                     ("✦ " + daily_quip(g_state.quip_day)).c_str());
-}
-
 void clear_list() {
   GtkWidget* child =
       gtk_widget_get_first_child(GTK_WIDGET(g_state.device_list));
@@ -740,19 +746,22 @@ void clear_list() {
 
 std::vector<DeviceRow> sorted_devices() {
   std::vector<DeviceRow> rows = g_state.document.devices;
-  std::sort(rows.begin(), rows.end(),
-            [](DeviceRow const& a, DeviceRow const& b) {
-              if (g_state.sort_mode == 1) {
-                return a.computed.cost_per_day_minor <
+  if (g_state.sort_mode == 1) {
+    // 最近购买: newest purchase first (design/DESIGN.md sort contract)
+    std::sort(rows.begin(), rows.end(),
+              [](DeviceRow const& a, DeviceRow const& b) {
+                return a.purchase_date > b.purchase_date;
+              });
+  } else if (g_state.sort_mode == 2) {
+    // 每日成本排序按币种分组，同组数值降序 (design/DESIGN.md)
+    std::sort(rows.begin(), rows.end(),
+              [](DeviceRow const& a, DeviceRow const& b) {
+                if (a.currency != b.currency) return a.currency < b.currency;
+                return a.computed.cost_per_day_minor >
                        b.computed.cost_per_day_minor;
-              }
-              if (g_state.sort_mode == 2) {
-                return a.computed.payback_progress >
-                       b.computed.payback_progress;
-              }
-              // "yyyy-MM-dd HH:mm:ss" compares chronologically as text
-              return a.created_at > b.created_at;
-            });
+              });
+  }
+  // sort_mode == 0 keeps the engine's deterministic merged order
   return rows;
 }
 
@@ -800,39 +809,45 @@ std::string category_css_class(std::string const& category) {
 // GTK theme, so swapping our backgrounds is what keeps dark mode legible —
 // a single light stylesheet under a dark GTK theme renders light-on-light.
 char const* const kLightCss = R"CSS(
+/* tokens = design/prototype/shared.css light pair (2026-11 redesign) */
 .payback-paper { background: #FAF7F2; }
-.payback-card { background: #FFFFFF; border: 1px solid #E8E2D9; border-radius: 12px; padding: 12px 14px; }
-.payback-tile { background: #FFFFFF; border: 1px solid #E8E2D9; border-radius: 14px; padding: 10px 14px; }
-.payback-earned { color: #38964D; }
-.payback-accent { color: #C15F3C; }
+.payback-card { background: #FFFFFF; border: 1px solid #E1DCD4; border-radius: 16px; padding: 20px 24px; }
+.payback-tile { background: #FFFFFF; border: 1px solid #E1DCD4; border-radius: 14px; padding: 10px 14px; }
+.payback-earned { color: #276D3B; }
+.payback-accent { color: #A64A2B; }
 .payback-dim { opacity: 0.65; font-size: 12px; }
-.payback-meta { opacity: 0.65; font-size: 12px; }
+.payback-meta { color: #68635C; font-size: 14px; }
 .payback-cost { font-size: 20px; font-weight: bold; }
 .payback-cost-label { opacity: 0.65; font-size: 11px; }
 .payback-name { font-size: 16px; font-weight: 600; }
 .payback-badges { font-size: 12px; }
-.payback-quip { opacity: 0.65; font-size: 12px; }
 .payback-section { font-weight: bold; opacity: 0.8; }
-.payback-detail-name { font-size: 22px; font-weight: 700; }
+.payback-section-title { font-size: 19px; font-weight: 700; color: #302D29; }
+.payback-detail-name { font-size: 26px; font-weight: 700; color: #302D29; }
 .payback-tile-value { font-size: 17px; font-weight: bold; }
 .payback-mono { font-family: monospace; font-size: 11px; }
 .payback-warning { color: #B25E09; }
 .payback-empty-emoji { font-size: 40px; }
 .payback-empty-title { font-size: 20px; font-weight: bold; }
-.payback-capsule { background: rgba(56,150,77,0.14); border-radius: 999px; padding: 6px 12px; }
-.payback-capsule-text { color: #38964D; font-weight: bold; }
-.payback-card-earn { background: rgba(56,150,77,0.10); }
-.payback-hint-card { background: rgba(193,95,60,0.10); border-radius: 12px; padding: 12px 14px; }
-.payback-list row { padding: 7px 8px; border-radius: 10px; }
+.payback-capsule { background: rgba(39,109,59,0.12); border-radius: 999px; padding: 6px 12px; }
+.payback-capsule-text { color: #276D3B; font-weight: bold; }
+.payback-card-earn { background: rgba(39,109,59,0.10); }
+.payback-hint-card { background: rgba(166,74,43,0.10); border-radius: 16px; padding: 12px 14px; }
+.payback-curve-card { background: #FFFFFF; border: 1px solid #E1DCD4; border-bottom: 1px solid #E1DCD4; border-radius: 0 0 0 0; padding: 16px 4px 20px 4px; border-top: 0; }
+.payback-hero-number { font-size: 40px; font-weight: 700; color: #302D29; }
+.payback-goal-met { font-size: 26px; font-weight: 700; color: #276D3B; }
+.payback-goal-remaining { font-size: 26px; font-weight: 700; color: #A64A2B; }
+.payback-goal-question { font-size: 19px; font-weight: 600; color: #302D29; }
+.payback-list row { padding: 7px 8px; border-radius: 12px; }
 .payback-badge { font-size: 17px; border-radius: 10px; }
 .payback-badge-lg { font-size: 28px; border-radius: 14px; }
 /* the primary action is the brand accent, never the GTK theme's suggested
    color (docs/design.md: orange = in-progress value; Yaru renders
    suggested-action in the user's accent hue, which violates the palette) */
-button.suggested-action { background: #C15F3C; color: #FFFFFF; border: none; }
-button.suggested-action:hover { background: #B05536; }
-button.suggested-action:active { background: #9E4B30; }
-button.suggested-action > label { color: #FFFFFF; }
+button.suggested-action { background: #A64A2B; color: #FAF7F2; border: none; }
+button.suggested-action:hover { background: #913E23; }
+button.suggested-action:active { background: #913E23; }
+button.suggested-action > label { color: #FAF7F2; }
 .cat-computer { background-color: rgba(10,132,255,0.14); }
 .cat-phone { background-color: rgba(48,176,199,0.14); }
 .cat-tablet { background-color: rgba(94,92,230,0.14); }
@@ -843,41 +858,50 @@ button.suggested-action > label { color: #FFFFFF; }
 .cat-appliance { background-color: rgba(50,173,230,0.15); }
 .cat-accessory { background-color: rgba(0,199,190,0.16); }
 .cat-other { background-color: rgba(193,95,60,0.14); }
-.payback-bar-accent > trough > progress { background-color: #C15F3C; border-radius: 3px; }
-.payback-bar-earn > trough > progress { background-color: #38964D; border-radius: 3px; }
+.payback-bar-accent > trough > progress { background-color: #A64A2B; border-radius: 3px; }
+.payback-bar-earn > trough > progress { background-color: #276D3B; border-radius: 3px; }
+.payback-status-row { padding: 10px 16px; }
+.payback-summary-hero { font-size: 28px; font-weight: 700; color: #302D29; }
+.payback-mini-value { font-size: 16px; font-weight: 600; color: #302D29; }
 )CSS";
 
 char const* const kDarkCss = R"CSS(
-.payback-paper { background: #1F1D1A; }
-.payback-card { background: #2B2926; border: 1px solid #3A3835; border-radius: 12px; padding: 12px 14px; }
-.payback-tile { background: #2B2926; border: 1px solid #3A3835; border-radius: 14px; padding: 10px 14px; }
-.payback-earned { color: #57B26B; }
-.payback-accent { color: #D98A66; }
+/* tokens = design/prototype/shared.css dark pair (2026-11 redesign) */
+.payback-paper { background: #211F1C; }
+.payback-card { background: #2B2926; border: 1px solid #47413B; border-radius: 16px; padding: 20px 24px; }
+.payback-tile { background: #2B2926; border: 1px solid #47413B; border-radius: 14px; padding: 10px 14px; }
+.payback-earned { color: #8BC79B; }
+.payback-accent { color: #E5A17E; }
 .payback-dim { opacity: 0.65; font-size: 12px; }
-.payback-meta { opacity: 0.65; font-size: 12px; }
+.payback-meta { color: #B9B1A7; font-size: 14px; }
 .payback-cost { font-size: 20px; font-weight: bold; }
 .payback-cost-label { opacity: 0.65; font-size: 11px; }
 .payback-name { font-size: 16px; font-weight: 600; }
 .payback-badges { font-size: 12px; }
-.payback-quip { opacity: 0.65; font-size: 12px; }
 .payback-section { font-weight: bold; opacity: 0.8; }
-.payback-detail-name { font-size: 22px; font-weight: 700; }
+.payback-section-title { font-size: 19px; font-weight: 700; color: #EEE9E2; }
+.payback-detail-name { font-size: 26px; font-weight: 700; color: #EEE9E2; }
 .payback-tile-value { font-size: 17px; font-weight: bold; }
 .payback-mono { font-family: monospace; font-size: 11px; }
 .payback-warning { color: #E8A33D; }
 .payback-empty-emoji { font-size: 40px; }
 .payback-empty-title { font-size: 20px; font-weight: bold; }
-.payback-capsule { background: rgba(87,178,107,0.16); border-radius: 999px; padding: 6px 12px; }
-.payback-capsule-text { color: #57B26B; font-weight: bold; }
-.payback-card-earn { background: rgba(87,178,107,0.12); }
-.payback-hint-card { background: rgba(217,138,102,0.12); border-radius: 12px; padding: 12px 14px; }
-.payback-list row { padding: 7px 8px; border-radius: 10px; }
+.payback-capsule { background: rgba(139,199,155,0.16); border-radius: 999px; padding: 6px 12px; }
+.payback-capsule-text { color: #8BC79B; font-weight: bold; }
+.payback-card-earn { background: rgba(139,199,155,0.12); }
+.payback-hint-card { background: rgba(229,161,126,0.12); border-radius: 16px; padding: 12px 14px; }
+.payback-curve-card { background: #2B2926; border: 1px solid #47413B; padding: 16px 4px 20px 4px; }
+.payback-hero-number { font-size: 40px; font-weight: 700; color: #EEE9E2; }
+.payback-goal-met { font-size: 26px; font-weight: 700; color: #8BC79B; }
+.payback-goal-remaining { font-size: 26px; font-weight: 700; color: #E5A17E; }
+.payback-goal-question { font-size: 19px; font-weight: 600; color: #EEE9E2; }
+.payback-list row { padding: 7px 8px; border-radius: 12px; }
 .payback-badge { font-size: 17px; border-radius: 10px; }
 .payback-badge-lg { font-size: 28px; border-radius: 14px; }
-button.suggested-action { background: #D98A66; color: #1F1D1A; border: none; }
-button.suggested-action:hover { background: #E29A78; }
-button.suggested-action:active { background: #C97B5B; }
-button.suggested-action > label { color: #1F1D1A; }
+button.suggested-action { background: #E5A17E; color: #211F1C; border: none; }
+button.suggested-action:hover { background: #EFB596; }
+button.suggested-action:active { background: #EFB596; }
+button.suggested-action > label { color: #211F1C; }
 .cat-computer { background-color: rgba(10,132,255,0.20); }
 .cat-phone { background-color: rgba(48,176,199,0.20); }
 .cat-tablet { background-color: rgba(94,92,230,0.20); }
@@ -888,8 +912,11 @@ button.suggested-action > label { color: #1F1D1A; }
 .cat-appliance { background-color: rgba(50,173,230,0.21); }
 .cat-accessory { background-color: rgba(0,199,190,0.22); }
 .cat-other { background-color: rgba(217,138,102,0.18); }
-.payback-bar-accent > trough > progress { background-color: #D98A66; border-radius: 3px; }
-.payback-bar-earn > trough > progress { background-color: #57B26B; border-radius: 3px; }
+.payback-bar-accent > trough > progress { background-color: #E5A17E; border-radius: 3px; }
+.payback-bar-earn > trough > progress { background-color: #8BC79B; border-radius: 3px; }
+.payback-status-row { padding: 10px 16px; }
+.payback-summary-hero { font-size: 28px; font-weight: 700; color: #EEE9E2; }
+.payback-mini-value { font-size: 16px; font-weight: 600; color: #EEE9E2; }
 )CSS";
 
 // same heuristic as the prefer-dark setup: a theme whose name contains
@@ -931,57 +958,40 @@ void apply_css() {
 
 // -------------------------------------------------------------- rendering
 
-// Mixed portfolios never show one combined money value: the backend nulls
-// the combined scalars and the tiles join the per-currency groups (#23).
-template <typename Format>
-std::string joined_group_money(Document const& d, Format format) {
-  std::string joined;
-  for (CurrencyGroup const& group : d.currency_groups) {
-    if (!joined.empty()) joined += " · ";
-    joined += format(group);
-  }
-  return joined;
-}
-
+// 2026-11 redesign sidebar summary: the investment hero renders the
+// default currency's group only; mixed portfolios keep the note instead of
+// any combined money value (#23, design/DESIGN.md). The earned tile and
+// the rotating quips are retired with the terminology contract.
 void render_summary() {
   Document const& d = g_state.document;
-  gtk_label_set_text(
-      g_state.total_spent,
-      (d.mixed_currency()
-           ? joined_group_money(
-                 d, [](CurrencyGroup const& g) {
-                   return money(static_cast<double>(g.total_spent_minor),
-                                g.currency);
-                 })
-           : money(static_cast<double>(d.total_spent_minor), d.currency))
-          .c_str());
-  gtk_label_set_text(
-      g_state.earned_back,
-      (d.mixed_currency()
-           ? joined_group_money(d, [](CurrencyGroup const& g) {
-               return money(g.earned_total_minor, g.currency);
-             })
-           : money(d.earned_total_minor, d.currency))
-          .c_str());
-  // the earn green appears exactly when value has been earned back (mac
-  // StatTile tint rule, docs/design.md) — never on a zero summary
-  if (d.earned_total_minor > 0) {
-    gtk_widget_add_css_class(GTK_WIDGET(g_state.earned_back),
-                             "payback-earned");
-  } else {
-    gtk_widget_remove_css_class(GTK_WIDGET(g_state.earned_back),
-                                "payback-earned");
+  CurrencyGroup const* group = nullptr;
+  for (CurrencyGroup const& candidate : d.currency_groups) {
+    if (candidate.currency == d.currency) group = &candidate;
   }
-  gtk_label_set_text(
-      g_state.overall_daily,
-      (d.mixed_currency()
-           ? joined_group_money(d, [](CurrencyGroup const& g) {
-               return money(g.avg_cost_per_day_minor, g.currency);
-             })
-           : money(d.avg_cost_per_day_minor, d.currency))
-          .c_str());
+  std::string spent_text;
+  std::string daily_text;
+  if (group != nullptr) {
+    spent_text = money(static_cast<double>(group->total_spent_minor),
+                       group->currency);
+    daily_text = money(group->daily_cost_sum_minor, group->currency);
+  } else if (d.currency_groups.size() == 1) {
+    // a single group under another code (a synced default change with old
+    // records): render that one group
+    spent_text = money(
+        static_cast<double>(d.currency_groups.front().total_spent_minor),
+        d.currency_groups.front().currency);
+    daily_text = money(d.currency_groups.front().daily_cost_sum_minor,
+                       d.currency_groups.front().currency);
+  } else {
+    spent_text = money(0.0, d.currency);
+    daily_text = money(0.0, d.currency);
+  }
+  gtk_label_set_text(g_state.total_spent, spent_text.c_str());
+  gtk_label_set_text(g_state.daily_total, daily_text.c_str());
   gtk_label_set_text(g_state.device_count,
                      std::to_string(d.device_count).c_str());
+  gtk_widget_set_visible(GTK_WIDGET(g_state.mixed_note),
+                         d.mixed_currency() ? TRUE : FALSE);
 }
 
 // Rounded icon badge whose backdrop hue follows the device category —
@@ -1043,8 +1053,8 @@ void draw_ring(GtkDrawingArea*, cairo_t* cr, int width, int height,
 
   if (progress > 0.0005) {
     GdkRGBA const tone = spec->paid_back
-                             ? theme_color("#38964D", "#57B26B")
-                             : theme_color("#C15F3C", "#D98A66");
+                             ? theme_color("#276D3B", "#8BC79B")
+                             : theme_color("#A64A2B", "#E5A17E");
     cairo_set_source_rgba(cr, tone.red, tone.green, tone.blue, 1.0);
     cairo_set_line_width(cr, spec->line_width);
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
@@ -1059,7 +1069,7 @@ void draw_ring(GtkDrawingArea*, cairo_t* cr, int width, int height,
   if (spec->paid_back) {
     // a stroked check, not a font glyph: cairo's "Sans" has no U+2713 on
     // many stock installs and renders tofu in the ring's center
-    GdkRGBA const earn = theme_color("#38964D", "#57B26B");
+    GdkRGBA const earn = theme_color("#276D3B", "#8BC79B");
     cairo_set_source_rgba(cr, earn.red, earn.green, earn.blue, 1.0);
     double const check = radius * 0.42;
     cairo_set_line_width(cr, spec->line_width * 1.15);
@@ -1115,7 +1125,7 @@ void draw_cost_curve(GtkDrawingArea*, cairo_t* cr, int width, int height,
 
   auto const first = point_at(1);
   auto const last = point_at(spec->days_held);
-  GdkRGBA const accent = theme_color("#C15F3C", "#D98A66");
+  GdkRGBA const accent = theme_color("#A64A2B", "#E5A17E");
   auto set_accent = [&](double alpha) {
     cairo_set_source_rgba(cr, accent.red, accent.green, accent.blue, alpha);
   };
@@ -1204,81 +1214,136 @@ void render_detail_pane() {
   DeviceRow const row = *found;  // copy: the document may reload underneath
   payback::linux_strings::Strings const s = strings();
 
-  // header: badge + name + price · date + 🎉 paid-back capsule
-  auto* header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 14);
-  gtk_box_append(GTK_BOX(header),
-                 category_badge(row.icon, row.category, true));
-  auto* title_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+  // ----- head: category eyebrow + days together, name, price · date -----
+  auto* head = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+  std::string const eyebrow_text = category_display_name(row.category) +
+                                   " · " +
+                                   replace_all_copy(s.days_together(), "{days}",
+                                                    format_days(row.computed.days_held));
+  auto* eyebrow = gtk_label_new(eyebrow_text.c_str());
+  gtk_widget_set_halign(eyebrow, GTK_ALIGN_START);
+  gtk_widget_add_css_class(eyebrow, "payback-meta");
+  gtk_box_append(GTK_BOX(head), eyebrow);
   auto* name = gtk_label_new(row.name.c_str());
-  gtk_label_set_ellipsize(GTK_LABEL(name), PANGO_ELLIPSIZE_END);
+  gtk_label_set_wrap(GTK_LABEL(name), TRUE);
   gtk_widget_set_halign(name, GTK_ALIGN_START);
   gtk_widget_add_css_class(name, "payback-detail-name");
-  gtk_box_append(GTK_BOX(title_box), name);
+  gtk_box_append(GTK_BOX(head), name);
   std::string const facts =
       money(static_cast<double>(row.price_minor), row.currency) + " · " +
-      row.purchase_date;
-  gtk_box_append(GTK_BOX(title_box), detail_label(facts.c_str(), "payback-meta"));
-  gtk_box_append(GTK_BOX(header), title_box);
-  auto* spring = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_widget_set_hexpand(spring, TRUE);
-  gtk_box_append(GTK_BOX(header), spring);
-  if (row.computed.paid_back) {
-    auto* capsule = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    gtk_widget_add_css_class(capsule, "payback-capsule");
-    gtk_widget_set_valign(capsule, GTK_ALIGN_START);
-    gtk_box_append(GTK_BOX(capsule), gtk_label_new("🎉"));
-    gtk_box_append(GTK_BOX(capsule),
-                   detail_label(s.paid_back().c_str(), "payback-capsule-text"));
-    gtk_box_append(GTK_BOX(header), capsule);
-  }
-  gtk_box_append(g_state.detail_container, header);
+      s.purchased_on() + " " + row.purchase_date;
+  gtk_box_append(GTK_BOX(head), detail_label(facts.c_str(), "payback-meta"));
+  gtk_box_append(g_state.detail_container, head);
 
-  // stat tiles: daily cost, held-for, and (with a willing price) per-day worth
-  auto* tiles = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-  gtk_box_append(
-      GTK_BOX(tiles),
-      stat_tile(s.daily_cost().c_str(),
-                money(row.computed.cost_per_day_minor, row.currency) + " " +
-                    s.per_day(),
-                row.computed.paid_back));
-  gtk_box_append(GTK_BOX(tiles),
-                 stat_tile(s.held_for().c_str(),
-                           std::to_string(row.computed.days_held) + " " +
-                               s.days(),
-                           false));
+  // ----- hero: today's daily cost | the personal value goal -----
+  auto* hero = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  gtk_widget_add_css_class(hero, "payback-card");
+  auto* hero_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 24);
+
+  auto* hero_left = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+  gtk_widget_set_hexpand(hero_left, TRUE);
+  gtk_box_append(GTK_BOX(hero_left),
+                 detail_label(s.hero_daily_label().c_str(), "payback-meta"));
+  auto* hero_number_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+  auto* hero_number = gtk_label_new(
+      money(row.computed.cost_per_day_minor, row.currency).c_str());
+  gtk_widget_set_halign(hero_number, GTK_ALIGN_START);
+  gtk_widget_add_css_class(hero_number, "payback-hero-number");
+  gtk_box_append(GTK_BOX(hero_number_row), hero_number);
+  auto* hero_unit = gtk_label_new(s.per_day().c_str());
+  gtk_widget_set_valign(hero_unit, GTK_ALIGN_END);
+  gtk_widget_add_css_class(hero_unit, "payback-meta");
+  gtk_box_append(GTK_BOX(hero_number_row), hero_unit);
+  gtk_box_append(GTK_BOX(hero_left), hero_number_row);
+  gtk_box_append(GTK_BOX(hero_left),
+                 detail_label(s.hero_daily_caption().c_str(), "payback-meta"));
+  gtk_box_append(GTK_BOX(hero_row), hero_left);
+
+  auto* divider = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
+  gtk_box_append(GTK_BOX(hero_row), divider);
+
+  auto* hero_right = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+  gtk_widget_set_hexpand(hero_right, TRUE);
   if (row.computed.willing_set) {
-    gtk_box_append(
-        GTK_BOX(tiles),
-        stat_tile(s.willing_per_day().c_str(),
-                  money(static_cast<double>(row.willing_per_day_minor),
-                        row.currency),
-                  false));
+    gtk_box_append(GTK_BOX(hero_right),
+                   detail_label((row.computed.paid_back
+                                     ? s.goal_met_heading()
+                                     : s.goal_remaining_heading())
+                                    .c_str(),
+                                "payback-meta"));
+    auto* goal_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    if (row.computed.paid_back) {
+      auto* met = gtk_label_new(("✓ " + s.paid_back()).c_str());
+      gtk_widget_set_halign(met, GTK_ALIGN_START);
+      gtk_widget_add_css_class(met, "payback-goal-met");
+      gtk_box_append(GTK_BOX(goal_row), met);
+    } else {
+      auto* remaining = gtk_label_new(
+          format_days(remaining_goal_days(row)).c_str());
+      gtk_widget_set_halign(remaining, GTK_ALIGN_START);
+      gtk_widget_add_css_class(remaining, "payback-goal-remaining");
+      gtk_box_append(GTK_BOX(goal_row), remaining);
+      auto* unit = gtk_label_new(s.days().c_str());
+      gtk_widget_set_valign(unit, GTK_ALIGN_END);
+      gtk_widget_add_css_class(unit, "payback-meta");
+      gtk_box_append(GTK_BOX(goal_row), unit);
+    }
+    gtk_box_append(GTK_BOX(hero_right), goal_row);
+    auto* bar = gtk_progress_bar_new();
+    gtk_progress_bar_set_fraction(
+        GTK_PROGRESS_BAR(bar),
+        std::clamp(row.computed.payback_progress, 0.0, 1.0));
+    gtk_widget_add_css_class(bar, row.computed.paid_back ? "payback-bar-earn"
+                                                         : "payback-bar-accent");
+    gtk_box_append(GTK_BOX(hero_right), bar);
+    std::string const based_on = replace_all_copy(
+        s.goal_based_on(), "{amount}",
+        money(static_cast<double>(row.willing_per_day_minor), row.currency));
+    gtk_box_append(GTK_BOX(hero_right),
+                   detail_label(based_on.c_str(), "payback-meta"));
+    if (row.computed.paid_back && row.computed.has_earned) {
+      std::string const extra = replace_all_copy(
+          s.goal_extra(), "{amount}",
+          money(std::max(row.computed.earned_minor, 0.0), row.currency));
+      gtk_box_append(GTK_BOX(hero_right),
+                     detail_label(extra.c_str(), "payback-meta"));
+    }
+  } else {
+    gtk_box_append(GTK_BOX(hero_right),
+                   detail_label(s.goal_met_heading().c_str(), "payback-meta"));
+    auto* question = gtk_label_new(s.goal_question().c_str());
+    gtk_widget_set_halign(question, GTK_ALIGN_START);
+    gtk_label_set_wrap(GTK_LABEL(question), TRUE);
+    gtk_widget_add_css_class(question, "payback-goal-question");
+    gtk_box_append(GTK_BOX(hero_right), question);
+    auto* hint = gtk_label_new(s.goal_set_hint().c_str());
+    gtk_widget_set_halign(hint, GTK_ALIGN_START);
+    gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
+    gtk_widget_add_css_class(hint, "payback-meta");
+    gtk_box_append(GTK_BOX(hero_right), hint);
   }
-  gtk_box_append(g_state.detail_container, tiles);
+  gtk_box_append(GTK_BOX(hero_row), hero_right);
+  gtk_box_append(GTK_BOX(hero), hero_row);
+  gtk_box_append(g_state.detail_container, hero);
 
-  // cost curve card: the hero chart, height-locked like the mac 64pt canvas
+  // ----- cost curve card -----
   auto* curve_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-  gtk_widget_add_css_class(curve_card, "payback-card");
+  gtk_widget_add_css_class(curve_card, "payback-curve-card");
   auto* curve_header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_box_append(GTK_BOX(curve_header),
-                 detail_label(s.daily_cost().c_str(), "payback-dim"));
+                 detail_label(s.chart_title().c_str(), "payback-section-title"));
   auto* curve_spring = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_set_hexpand(curve_spring, TRUE);
   gtk_box_append(GTK_BOX(curve_header), curve_spring);
-  std::string const today_cost =
-      money(static_cast<double>(row.price_minor) /
-                static_cast<double>(std::max<gint64>(row.computed.days_held, 1)),
-            row.currency) +
-      " " + s.per_day();
-  auto* today_label = gtk_label_new(today_cost.c_str());
-  gtk_widget_set_halign(today_label, GTK_ALIGN_END);
-  gtk_widget_add_css_class(today_label, "payback-accent");
-  gtk_widget_add_css_class(today_label, "payback-tile-value");
-  gtk_box_append(GTK_BOX(curve_header), today_label);
+  std::string const subtitle =
+      replace_all_copy(s.chart_subtitle(), "{days}",
+                       format_days(row.computed.days_held));
+  gtk_box_append(GTK_BOX(curve_header),
+                 detail_label(subtitle.c_str(), "payback-meta"));
   gtk_box_append(GTK_BOX(curve_card), curve_header);
 
   auto* curve = gtk_drawing_area_new();
-  gtk_widget_set_size_request(curve, -1, 64);
+  gtk_widget_set_size_request(curve, -1, 150);
   gtk_widget_set_hexpand(curve, TRUE);
   auto* curve_spec = g_new0(CurveSpec, 1);
   curve_spec->price_minor = row.price_minor;
@@ -1288,113 +1353,235 @@ void render_detail_pane() {
   gtk_box_append(GTK_BOX(curve_card), curve);
 
   auto* axis = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  std::string day_one = s.curve_day_label();
-  replace_all_in(day_one, "{day}", "1");
-  gtk_box_append(GTK_BOX(axis), detail_label(day_one.c_str(), "payback-dim"));
+  std::string const day_one_text = replace_all_copy(
+      s.chart_day_one(), "{amount}",
+      money(static_cast<double>(row.price_minor), row.currency));
+  gtk_box_append(GTK_BOX(axis),
+                 detail_label(day_one_text.c_str(), "payback-meta"));
   auto* axis_spring = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_set_hexpand(axis_spring, TRUE);
   gtk_box_append(GTK_BOX(axis), axis_spring);
-  std::string day_now = s.curve_day_label();
-  replace_all_in(day_now, "{day}", std::to_string(row.computed.days_held));
-  auto* day_now_label = gtk_label_new(day_now.c_str());
-  gtk_widget_set_halign(day_now_label, GTK_ALIGN_END);
-  gtk_widget_add_css_class(day_now_label, "payback-dim");
-  gtk_box_append(GTK_BOX(axis), day_now_label);
+  std::string const today_text = replace_all_copy(
+      s.chart_today(), "{amount}",
+      money(row.computed.cost_per_day_minor, row.currency) + " " +
+          s.per_day());
+  auto* today_label = gtk_label_new(today_text.c_str());
+  gtk_widget_set_halign(today_label, GTK_ALIGN_END);
+  gtk_widget_add_css_class(today_label, "payback-meta");
+  gtk_box_append(GTK_BOX(axis), today_label);
   gtk_box_append(GTK_BOX(curve_card), axis);
+  gtk_box_append(GTK_BOX(curve_card),
+                 detail_label(s.chart_note().c_str(), "payback-meta"));
   gtk_box_append(g_state.detail_container, curve_card);
 
-  // payback progress card: ring + bar + ETA, or the willing-price hint
-  if (row.computed.willing_set) {
-    auto* payback_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-    gtk_widget_add_css_class(payback_card, "payback-card");
-    if (row.computed.paid_back) {
-      gtk_widget_add_css_class(payback_card, "payback-card-earn");
-    }
-    auto* progress_header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-    auto* ring = gtk_drawing_area_new();
-    gtk_widget_set_size_request(ring, 38, 38);
-    auto* ring_spec = g_new0(RingSpec, 1);
-    ring_spec->progress = row.computed.payback_progress;
-    ring_spec->paid_back = row.computed.paid_back;
-    ring_spec->line_width = 5.0;
-    ring_spec->font_size = 10.5;
-    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(ring), draw_ring,
-                                   ring_spec, g_free);
-    gtk_box_append(GTK_BOX(progress_header), ring);
-    gtk_box_append(GTK_BOX(progress_header),
-                   detail_label(s.payback_progress().c_str(), "payback-name"));
-    auto* progress_spring = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    gtk_widget_set_hexpand(progress_spring, TRUE);
-    gtk_box_append(GTK_BOX(progress_header), progress_spring);
-    std::string const headline =
-        row.computed.paid_back
-            ? s.paid_back()
-            : std::to_string(static_cast<int>(
-                  row.computed.payback_progress * 100.0 + 0.5)) + "%";
-    auto* headline_label = gtk_label_new(headline.c_str());
-    gtk_widget_set_halign(headline_label, GTK_ALIGN_END);
-    gtk_widget_add_css_class(headline_label, "payback-tile-value");
-    gtk_widget_add_css_class(headline_label, row.computed.paid_back
-                                                 ? "payback-earned"
-                                                 : "payback-accent");
-    gtk_box_append(GTK_BOX(progress_header), headline_label);
-    gtk_box_append(GTK_BOX(payback_card), progress_header);
+  // ----- milestones | method -----
+  auto* bottom = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 32);
 
-    auto* bar = gtk_progress_bar_new();
-    gtk_progress_bar_set_fraction(
-        GTK_PROGRESS_BAR(bar),
-        std::clamp(row.computed.payback_progress, 0.0, 1.0));
-    gtk_widget_add_css_class(bar, row.computed.paid_back ? "payback-bar-earn"
-                                                         : "payback-bar-accent");
-    gtk_box_append(GTK_BOX(payback_card), bar);
-
-    std::string note;
-    if (row.computed.paid_back) {
-      if (row.computed.has_earned) {
-        note = s.earned_so_far() + " " +
-               money(row.computed.earned_minor, row.currency);
-      }
-    } else if (!row.computed.payback_eta.empty()) {
-      note = s.payback_eta() + ": " + row.computed.payback_eta;
+  auto* milestone_stack = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  gtk_widget_set_hexpand(milestone_stack, TRUE);
+  {
+    auto* head_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_box_append(GTK_BOX(head_row),
+                   detail_label(s.milestones_title().c_str(),
+                                "payback-section-title"));
+    auto* head_spring = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_set_hexpand(head_spring, TRUE);
+    gtk_box_append(GTK_BOX(head_row), head_spring);
+    int achieved_days = 0;
+    for (Milestone const& m : row.computed.milestones) {
+      if (m.key.rfind("days-", 0) == 0 && m.achieved) ++achieved_days;
     }
-    if (!note.empty()) {
-      gtk_box_append(GTK_BOX(payback_card),
-                     detail_label(note.c_str(), "payback-meta"));
-    }
-    gtk_box_append(g_state.detail_container, payback_card);
-  } else {
-    auto* hint_card = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-    gtk_widget_add_css_class(hint_card, "payback-hint-card");
-    gtk_box_append(GTK_BOX(hint_card), gtk_label_new("💡"));
-    gtk_box_append(GTK_BOX(hint_card),
-                   detail_label(s.willing_hint().c_str(), "payback-meta"));
-    gtk_box_append(g_state.detail_container, hint_card);
+    gtk_box_append(GTK_BOX(head_row),
+                   detail_label((std::to_string(achieved_days) + " / 3").c_str(),
+                                "payback-meta"));
+    gtk_box_append(GTK_BOX(milestone_stack), head_row);
   }
-
-  // milestone ladder: every rung with its emoji, dimmed until reached
-  auto* ladder_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-  gtk_widget_add_css_class(ladder_card, "payback-card");
-  gtk_box_append(GTK_BOX(ladder_card),
-                 detail_label(s.milestones().c_str(), "payback-section"));
+  // the prototype's ladder: only the three days-together milestones; cost
+  // thresholds live in the expander below
   for (Milestone const& milestone : row.computed.milestones) {
+    if (milestone.key.rfind("days-", 0) != 0) continue;
     auto* line = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-    auto* emoji = gtk_label_new(milestone_emoji(milestone.key).c_str());
-    if (!milestone.achieved) gtk_widget_set_opacity(emoji, 0.3);
-    gtk_box_append(GTK_BOX(line), emoji);
-    gtk_box_append(GTK_BOX(line),
-                   detail_label(milestone_label(milestone.key).c_str(),
-                                nullptr));
+    auto* mark = gtk_label_new(milestone.achieved ? "✓" : "›");
+    gtk_widget_add_css_class(mark, milestone.achieved ? "payback-earned"
+                                                      : "payback-meta");
+    gtk_box_append(GTK_BOX(line), mark);
+    std::string const thousand = milestone.key == "days-1000"
+                                     ? "1,000"
+                                     : (milestone.key == "days-365" ? "365"
+                                                                    : "100");
+    gtk_box_append(
+        GTK_BOX(line),
+        detail_label(replace_all_copy(s.days_together(), "{days}", thousand)
+                         .c_str(),
+                     milestone.achieved ? "payback-name" : "payback-meta"));
     auto* line_spring = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_widget_set_hexpand(line_spring, TRUE);
     gtk_box_append(GTK_BOX(line), line_spring);
     if (milestone.achieved) {
-      auto* check = gtk_label_new("✓");
-      gtk_widget_add_css_class(check, "payback-earned");
-      gtk_box_append(GTK_BOX(line), check);
+      gtk_box_append(GTK_BOX(line),
+                     detail_label(s.milestone_reached().c_str(),
+                                  "payback-earned"));
+    } else {
+      int const target = milestone.key == "days-1000" ? 1000
+                         : (milestone.key == "days-365" ? 365 : 100);
+      auto const remaining =
+          std::max(target - static_cast<int>(row.computed.days_held), 1);
+      gtk_box_append(
+          GTK_BOX(line),
+          detail_label(replace_all_copy(s.milestone_days_to_go(), "{days}",
+                                        format_days(remaining))
+                           .c_str(),
+                       "payback-meta"));
     }
-    gtk_box_append(GTK_BOX(ladder_card), line);
+    gtk_box_append(GTK_BOX(milestone_stack), line);
   }
-  gtk_box_append(g_state.detail_container, ladder_card);
+  auto* cost_expander = gtk_expander_new(s.cost_milestones_title().c_str());
+  auto* cost_lines = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  for (Milestone const& milestone : row.computed.milestones) {
+    if (milestone.key.rfind("cpd-", 0) != 0) continue;
+    double const threshold_major = cpd_threshold_major(milestone.key);
+    std::string const line_text =
+        (milestone.achieved ? s.milestone_reached()
+                            : s.cost_milestone_not_yet()) +
+        " · " +
+        replace_all_copy(s.cost_milestone_below(), "{amount}",
+                         money(threshold_major * 100, row.currency)) +
+        s.per_day();
+    gtk_box_append(GTK_BOX(cost_lines),
+                   detail_label(line_text.c_str(), "payback-meta"));
+  }
+  gtk_expander_set_child(GTK_EXPANDER(cost_expander), cost_lines);
+  gtk_box_append(GTK_BOX(milestone_stack), cost_expander);
+  gtk_box_append(GTK_BOX(bottom), milestone_stack);
+
+  auto* method_stack = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_set_hexpand(method_stack, TRUE);
+  gtk_box_append(GTK_BOX(method_stack),
+                 detail_label(s.method_title().c_str(),
+                              "payback-section-title"));
+  gtk_box_append(GTK_BOX(method_stack),
+                 detail_label(s.method_intro1().c_str(), "payback-meta"));
+  gtk_box_append(GTK_BOX(method_stack),
+                 detail_label(s.method_intro2().c_str(), "payback-meta"));
+  auto* calc_expander = gtk_expander_new(s.method_calc_title().c_str());
+  auto* calc_lines = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  auto* calc_days = gtk_label_new(s.method_calc_days().c_str());
+  gtk_label_set_wrap(GTK_LABEL(calc_days), TRUE);
+  gtk_widget_set_halign(calc_days, GTK_ALIGN_START);
+  gtk_widget_add_css_class(calc_days, "payback-meta");
+  gtk_box_append(GTK_BOX(calc_lines), calc_days);
+  auto* calc_reset = gtk_label_new(s.method_calc_reset().c_str());
+  gtk_label_set_wrap(GTK_LABEL(calc_reset), TRUE);
+  gtk_widget_set_halign(calc_reset, GTK_ALIGN_START);
+  gtk_widget_add_css_class(calc_reset, "payback-meta");
+  gtk_box_append(GTK_BOX(calc_lines), calc_reset);
+  gtk_expander_set_child(GTK_EXPANDER(calc_expander), calc_lines);
+  gtk_box_append(GTK_BOX(method_stack), calc_expander);
+  gtk_box_append(GTK_BOX(bottom), method_stack);
+
+  gtk_box_append(g_state.detail_container, bottom);
+
+  if (!row.notes.empty()) {
+    auto* notes = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    gtk_box_append(GTK_BOX(notes),
+                   detail_label(s.notes_title().c_str(),
+                                "payback-section-title"));
+    auto* notes_body = gtk_label_new(row.notes.c_str());
+    gtk_label_set_wrap(GTK_LABEL(notes_body), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(notes_body), 0.0);
+    gtk_widget_add_css_class(notes_body, "payback-meta");
+    gtk_box_append(GTK_BOX(notes), notes_body);
+    gtk_box_append(g_state.detail_container, notes);
+  }
+}
+
+// display helpers shared with the trash dialog; engine-derived values only
+// (the prototype's arithmetic on computed numbers)
+
+std::string replace_all_copy(std::string text, std::string const& from,
+                             std::string const& to) {
+  replace_all_in(text, from, to);
+  return text;
+}
+
+// Howard Hinnant's days_from_civil, the engine's own algorithm
+std::int64_t civil_days(std::int64_t y, std::int64_t m, std::int64_t d) {
+  std::int64_t const yy = m <= 2 ? y - 1 : y;
+  std::int64_t const mm = m <= 2 ? m + 9 : m - 3;
+  std::int64_t const era = yy / 400;
+  std::int64_t const yoe = yy - era * 400;
+  std::int64_t const doy = (153 * mm + 2) / 5 + d - 1;
+  std::int64_t const doe = 365 * yoe + yoe / 4 - yoe / 100 + doy;
+  return era * 146097 + doe - 719468;
+}
+
+std::int64_t days_between_dates(std::string const& from,
+                                std::string const& to) {
+  auto const parse = [](std::string const& text) -> std::int64_t {
+    if (text.size() < 10) return 0;
+    auto const digit = [](char const c) { return c - '0'; };
+    std::int64_t const y = digit(text[0]) * 1000 + digit(text[1]) * 100 +
+                           digit(text[2]) * 10 + digit(text[3]);
+    std::int64_t const m = digit(text[5]) * 10 + digit(text[6]);
+    std::int64_t const d = digit(text[8]) * 10 + digit(text[9]);
+    return civil_days(y, m, d);
+  };
+  return parse(to) - parse(from);
+}
+
+// remaining days to the goal: the engine's paybackEta date minus the days
+// already held, floored at zero
+std::int64_t remaining_goal_days(DeviceRow const& row) {
+  if (!row.has_willing || row.computed.payback_eta.empty()) return 0;
+  std::int64_t const total =
+      days_between_dates(row.purchase_date, row.computed.payback_eta) + 1;
+  return std::max<std::int64_t>(total - row.computed.days_held, 0);
+}
+
+std::string format_days(std::int64_t days) {
+  std::string digits = std::to_string(days);
+  std::string grouped;
+  int const first_group = static_cast<int>(digits.size() % 3);
+  std::size_t index = 0;
+  if (first_group > 0) {
+    grouped.append(digits, 0, static_cast<std::size_t>(first_group));
+    index = static_cast<std::size_t>(first_group);
+    if (index < digits.size()) grouped += ',';
+  }
+  for (; index < digits.size(); index += 3) {
+    grouped.append(digits, index, 3);
+    if (index + 3 < digits.size()) grouped += ',';
+  }
+  return grouped;
+}
+
+// thresholds in major units matching the engine's cpd ladder
+// (docs/data-format.md: cpd-10 achieved under 10.00 major per day)
+double cpd_threshold_major(std::string const& key) {
+  if (key == "cpd-10") return 10.0;
+  if (key == "cpd-5") return 5.0;
+  if (key == "cpd-2") return 2.0;
+  if (key == "cpd-1") return 1.0;
+  if (key == "cpd-05") return 0.5;
+  return 0.0;
+}
+
+// Prototype display names for stored category values: the seven form
+// options map onto engine values (accessory = keyboard, appliance =
+// coffee); legacy stored values keep their own labels so an edit never
+// silently rewrites them (design/DESIGN.md).
+std::string category_display_name(std::string const& category) {
+  payback::linux_strings::Strings const s = strings();
+  if (category == "computer") return s.category_computer();
+  if (category == "phone") return s.category_phone();
+  if (category == "tablet") return s.category_tablet();
+  if (category == "watch") return s.category_watch();
+  if (category == "audio") return s.category_audio();
+  if (category == "camera") return s.category_camera();
+  if (category == "gaming") return s.category_gaming();
+  if (category == "appliance") return s.category_appliance();
+  if (category == "accessory") return s.category_accessory();
+  return s.category_other();
 }
 
 // ---------------------------------------------------------- sidebar list
@@ -1513,24 +1700,13 @@ GtkWidget* device_row(DeviceRow const& row) {
   gtk_widget_set_hexpand(right_spring, TRUE);
   gtk_box_append(GTK_BOX(box), right_spring);
 
-  if (row.computed.willing_set) {
-    auto* ring = gtk_drawing_area_new();
-    gtk_widget_set_size_request(ring, 26, 26);
-    gtk_widget_set_valign(ring, GTK_ALIGN_CENTER);
-    auto* spec = g_new0(RingSpec, 1);
-    spec->progress = row.computed.payback_progress;
-    spec->paid_back = row.computed.paid_back;
-    spec->line_width = 3.0;
-    spec->font_size = 7.0;
-    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(ring), draw_ring, spec,
-                                   g_free);
-    gtk_box_append(GTK_BOX(box), ring);
-  } else {
-    std::string const emojis = achieved_emoji_suffix(row, 2);
-    if (!emojis.empty()) {
-      gtk_box_append(GTK_BOX(box),
-                     detail_label(emojis.c_str(), "payback-badges"));
-    }
+  // the prototype's trailing state-dot: green exactly when the goal is
+  // met (design/DESIGN.md — green carries no other meaning)
+  if (row.computed.paid_back) {
+    auto* dot = gtk_label_new("●");
+    gtk_widget_set_valign(dot, GTK_ALIGN_CENTER);
+    gtk_widget_add_css_class(dot, "payback-earned");
+    gtk_box_append(GTK_BOX(box), dot);
   }
 
   // right-click opens Edit/Delete; single-button mice get the headerbar
@@ -1594,7 +1770,6 @@ void render_document_from_cache() {
   }
   render_summary();
   render_device_list();
-  apply_quip();
   update_action_sensitivity();
   render_detail_pane();
 }
@@ -1628,8 +1803,12 @@ void load_all_async() {
                 d.earned_total_minor = jdouble(summary, "earnedTotalMinor");
                 d.avg_cost_per_day_minor =
                     jdouble(summary, "avgCostPerDayMinor");
+                d.daily_cost_sum_minor =
+                    jdouble(summary, "dailyCostSumMinor");
                 d.device_count =
                     static_cast<int>(jint(summary, "deviceCount"));
+                d.trash_count =
+                    static_cast<int>(jint(root, "trashCount"));
                 d.currency_groups.clear();
                 JsonArray* groups = jarray(summary, "currencyGroups");
                 guint const group_count = jlen(groups);
@@ -1639,7 +1818,8 @@ void load_all_async() {
                   d.currency_groups.push_back(CurrencyGroup{
                       jstr(g, "currency"), jint(g, "totalSpentMinor"),
                       jdouble(g, "earnedTotalMinor"),
-                      jdouble(g, "avgCostPerDayMinor")});
+                      jdouble(g, "avgCostPerDayMinor"),
+                      jdouble(g, "dailyCostSumMinor")});
                 }
               }
               d.devices.clear();
@@ -1712,7 +1892,7 @@ void show_delete_confirm(std::string const& id) {
       s.delete_confirm_title().c_str(), g_state.window,
       static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
       s.cancel().c_str(), GTK_RESPONSE_CANCEL,
-      s.remove().c_str(), GTK_RESPONSE_ACCEPT, nullptr);
+      s.move_to_deleted().c_str(), GTK_RESPONSE_ACCEPT, nullptr);
   GtkWidget* area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
   auto* text = gtk_label_new(s.delete_confirm_text().c_str());
   gtk_widget_set_margin_top(text, 8);
@@ -1744,6 +1924,9 @@ struct FormContext {
   GtkEntry* name{nullptr};
   GtkEntry* icon{nullptr};
   GtkComboBoxText* category{nullptr};
+  // seven display options mapped onto engine values; a legacy edit appends
+  // the stored value so the index → id mapping below stays total
+  std::vector<std::pair<std::string, std::string>> category_options;
   GtkEntry* price{nullptr};
   GtkEntry* date_entry{nullptr};
   GtkSwitch* willing_on{nullptr};
@@ -1879,18 +2062,65 @@ void save_device_payload(std::string const& json, bool update,
 void delete_device_async(std::string const& id) {
   if (g_state.api == nullptr) return;
   (void)g_state.api->delete_device_async(
-      id, [](rivet_app::Result<void> result) {
+      id, [id](rivet_app::Result<void> result) {
         auto unpacked = pb::unpack(result);
         pb::post_to_main<pb::Unpacked<void>>(
-            [](pb::Unpacked<void>& r) {
+            [&last = g_state.last_deleted_id, &undo = g_state.undo_button,
+             &bar = g_state.status_bar, &label = g_state.status_label,
+             id](pb::Unpacked<void>& r) {
               if (!r.ok) {
                 show_error(r.error);
                 return;
+              }
+              // delete is a tombstone: the toast's 撤销 can bring it back
+              // (docs/data-format.md "Trash")
+              last = id;
+              payback::linux_strings::Strings const s = strings();
+              gtk_label_set_text(label, s.toast_deleted().c_str());
+              gtk_revealer_set_reveal_child(bar, TRUE);
+              if (undo != nullptr) {
+                gtk_widget_set_visible(GTK_WIDGET(undo), TRUE);
               }
               load_all_async();
             },
             std::move(unpacked));
       });
+}
+
+// restore-device clears the tombstone with a fresh LWW claim; the record
+// returns with its purchase details and goal intact
+void restore_device_async(std::string const& id, bool follow_selection) {
+  if (g_state.api == nullptr) return;
+  (void)g_state.api->restore_device_async(
+      id, [&state = g_state, id, follow_selection](
+              rivet_app::Result<rivet::Bytes> result) {
+        auto unpacked = pb::unpack(result);
+        pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
+            [&state, id, follow_selection](pb::Unpacked<rivet::Bytes>& r) {
+              if (!r.ok) {
+                show_error(r.error);
+                return;
+              }
+              state.last_deleted_id.clear();
+              if (state.undo_button != nullptr) {
+                gtk_widget_set_visible(GTK_WIDGET(state.undo_button), FALSE);
+              }
+              if (follow_selection) state.selected_id = id;
+              show_success(strings().device_restored());
+              load_all_async();
+            },
+            std::move(unpacked));
+      });
+}
+
+void on_undo_clicked(GtkButton*, gpointer) {
+  std::string const id = g_state.last_deleted_id;
+  if (id.empty()) return;
+  g_state.last_deleted_id.clear();
+  if (g_state.undo_button != nullptr) {
+    gtk_widget_set_visible(GTK_WIDGET(g_state.undo_button), FALSE);
+  }
+  restore_device_async(id, true);
 }
 
 // Issue #24: the dialog stays open until persistence is confirmed. A
@@ -1944,8 +2174,11 @@ void on_form_response(GtkDialog* dialog, int response, gpointer user_data) {
 
   std::string const category =
       (ctx->category_index >= 0 &&
-       ctx->category_index < static_cast<gint>(std::size(kCategories)))
-          ? kCategories[ctx->category_index]
+       ctx->category_index <
+           static_cast<gint>(ctx->category_options.size()))
+          ? ctx->category_options[static_cast<std::size_t>(
+                                      ctx->category_index)]
+                                          .first
           : std::string("other");
 
   auto const price_minor = parse_amount_minor(ctx->price_text);
@@ -2012,29 +2245,36 @@ void open_device_form(bool update, std::string const& id) {
   form_row(panel, (s.icon() + " (💻📱🎧…)").c_str(), icon);
 
   auto* category = gtk_combo_box_text_new();
-  int selected = static_cast<int>(std::size(kCategories)) - 1;  // "other"
-  for (int i = 0; i < static_cast<int>(std::size(kCategories)); ++i) {
-    // localized display name; the id travels to the backend
-    std::string const label_text = [&s, i] {
-      switch (i) {
-        case 0: return s.category_computer();
-        case 1: return s.category_phone();
-        case 2: return s.category_tablet();
-        case 3: return s.category_watch();
-        case 4: return s.category_audio();
-        case 5: return s.category_camera();
-        case 6: return s.category_gaming();
-        case 7: return s.category_appliance();
-        case 8: return s.category_accessory();
-        default: return s.category_other();
-      }
-    }();
+  // the prototype's seven display options mapped onto engine values
+  // (accessory = keyboard, appliance = coffee); a legacy stored value
+  // (watch/camera/gaming) keeps its own entry so a save never silently
+  // rewrites it (design/DESIGN.md)
+  std::vector<std::pair<std::string, std::string>> const options = {
+      {"computer", s.category_computer()}, {"accessory", s.category_accessory()},
+      {"tablet", s.category_tablet()},     {"audio", s.category_audio()},
+      {"phone", s.category_phone()},       {"appliance", s.category_appliance()},
+      {"other", s.category_other()}};
+  int selected = static_cast<int>(options.size()) - 1;  // "other"
+  int index = 0;
+  bool legacy = true;
+  for (auto const& [category_id, category_label] : options) {
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(category),
-                                   label_text.c_str());
-    if (kCategories[i] == existing.category) selected = i;
+                                   category_label.c_str());
+    if (category_id == existing.category) {
+      selected = index;
+      legacy = false;
+    }
+    ++index;
+  }
+  if (update && legacy) {
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(category),
+                                   category_display_name(existing.category)
+                                       .c_str());
+    selected = static_cast<int>(options.size());
   }
   gtk_combo_box_set_active(GTK_COMBO_BOX(category), selected);
   context->category = GTK_COMBO_BOX_TEXT(category);
+  context->category_options = options;
   form_row(panel, s.category().c_str(), category);
 
   auto* price = gtk_entry_new();
@@ -2733,6 +2973,336 @@ void on_sync_toggle_clicked(GtkButton*, gpointer) {
   }
 }
 
+// ---------- trash / undo / backup (2026-11 redesign, #57) ----------------
+
+void apply_trash_payload(rivet::Bytes const& payload);
+
+void load_trash_async(bool show_after) {
+  if (g_state.api == nullptr) return;
+  (void)g_state.api->trash_list_async(
+      [show_after](rivet_app::Result<rivet::Bytes> result) {
+        auto unpacked = pb::unpack(result);
+        pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
+            [show_after](pb::Unpacked<rivet::Bytes>& r) {
+              if (!r.ok) {
+                show_error(r.error);
+                return;
+              }
+              apply_trash_payload(r.value);
+              if (show_after) show_trash_dialog();
+            },
+            std::move(unpacked));
+      });
+}
+
+void apply_trash_payload(rivet::Bytes const& payload) {
+  g_state.trash.clear();
+  JsonDoc doc(bytes_to_string(payload));
+  JsonObject* root = doc.root();
+  if (root == nullptr) return;
+  JsonArray* entries = jarray(root, "trash");
+  guint const count = jlen(entries);
+  for (guint i = 0; i < count; ++i) {
+    JsonObject* item = json_array_get_object_element(entries, i);
+    if (item == nullptr) continue;
+    DeviceRow row;
+    row.id = jstr(item, "id");
+    row.name = jstr(item, "name");
+    row.category = jstr(item, "category");
+    row.price_minor = jint(item, "priceMinor");
+    row.currency = jstr(item, "currency", g_state.document.currency);
+    row.purchase_date = jstr(item, "purchaseDate");
+    g_state.trash.push_back(row);
+  }
+}
+
+// 最近删除: restorable records, oldest 50 shown like the prototype;
+// restoring keeps ids and goals intact and there is no purge
+void show_trash_dialog() {
+  if (g_state.sync_dialog != nullptr) {
+    gtk_window_destroy(g_state.sync_dialog);
+  }
+  payback::linux_strings::Strings const s = strings();
+  auto* dialog = gtk_dialog_new_with_buttons(
+      s.trash_title().c_str(), g_state.window,
+      static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL |
+                                  GTK_DIALOG_DESTROY_WITH_PARENT),
+      s.close().c_str(), GTK_RESPONSE_CLOSE, nullptr);
+  GtkWidget* area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+  auto* content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_set_margin_top(content, 10);
+  gtk_widget_set_margin_bottom(content, 12);
+  gtk_widget_set_margin_start(content, 18);
+  gtk_widget_set_margin_end(content, 18);
+  gtk_box_append(GTK_BOX(area), content);
+
+  auto* intro = gtk_label_new(s.trash_intro().c_str());
+  gtk_label_set_wrap(GTK_LABEL(intro), TRUE);
+  gtk_label_set_xalign(GTK_LABEL(intro), 0.0);
+  gtk_widget_add_css_class(intro, "payback-dim");
+  gtk_box_append(GTK_BOX(content), intro);
+
+  std::size_t const shown = std::min<std::size_t>(g_state.trash.size(), 50);
+  for (std::size_t i = 0; i < shown; ++i) {
+    DeviceRow const& entry = g_state.trash[i];
+    auto* row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    auto* info = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    auto* name = gtk_label_new(entry.name.c_str());
+    gtk_label_set_wrap(GTK_LABEL(name), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(name), 0.0);
+    gtk_widget_add_css_class(name, "payback-name");
+    gtk_box_append(GTK_BOX(info), name);
+    std::string const facts =
+        money(static_cast<double>(entry.price_minor), entry.currency) + " · " +
+        entry.purchase_date;
+    gtk_box_append(GTK_BOX(info), detail_label(facts.c_str(), "payback-meta"));
+    gtk_widget_set_hexpand(info, TRUE);
+    gtk_box_append(GTK_BOX(row), info);
+    auto* restore = gtk_button_new_with_label(s.restore_button().c_str());
+    auto* id_copy = new std::string(entry.id);
+    g_signal_connect(
+        restore, "clicked",
+        G_CALLBACK(+[](GtkButton* button, gpointer user_data) {
+          std::unique_ptr<std::string> id(static_cast<std::string*>(user_data));
+          restore_device_async(*id, false);
+          // the row's parent dialog rebuilds on the next open; hide the
+          // button so a double-click cannot queue a second restore
+          gtk_widget_set_sensitive(GTK_WIDGET(button), FALSE);
+        }),
+        id_copy);
+    gtk_box_append(GTK_BOX(row), restore);
+    gtk_box_append(GTK_BOX(content), row);
+  }
+  if (g_state.trash.empty()) {
+    gtk_box_append(GTK_BOX(content),
+                   detail_label(s.trash_empty().c_str(), "payback-dim"));
+  }
+  gtk_window_set_transient_for(GTK_WINDOW(dialog), g_state.window);
+  g_state.sync_dialog = GTK_WINDOW(dialog);
+  g_signal_connect(
+      dialog, "destroy",
+      G_CALLBACK(+[](GtkWidget*, gpointer) { g_state.sync_dialog = nullptr; }),
+      nullptr);
+  gtk_window_present(GTK_WINDOW(dialog));
+}
+
+// the save/open choosers are their own dialogs; GtkFileChooserNative keeps
+// them out of the app window's transient chain
+std::optional<std::string> run_native_file_dialog(bool save) {
+  std::optional<std::string> path;
+  GtkFileChooserNative* native =
+      gtk_file_chooser_native_new(save ? "Save backup" : "Choose backup",
+                                  g_state.window,
+                                  save ? GTK_FILE_CHOOSER_ACTION_SAVE
+                                       : GTK_FILE_CHOOSER_ACTION_OPEN,
+                                  save ? "Save" : "Open", "Cancel");
+  GtkFileChooser* chooser = GTK_FILE_CHOOSER(native);
+  if (save) {
+    std::string const stamp = [] {
+      GDateTime* now = g_date_time_new_now_local();
+      std::string const text = g_date_time_format(now, "%Y-%m-%d");
+      g_date_time_unref(now);
+      return text;
+    }();
+    gtk_file_chooser_set_current_name(
+        chooser, ("payback-backup-" + stamp + ".json").c_str());
+  } else {
+    GtkFileFilter* filter = gtk_file_filter_new();
+    gtk_file_filter_set_name(filter, "JSON");
+    gtk_file_filter_add_pattern(filter, "*.json");
+    gtk_file_chooser_add_filter(chooser, filter);
+  }
+  gint const response = gtk_native_dialog_run(GTK_NATIVE_DIALOG(native));
+  if (response == GTK_RESPONSE_ACCEPT) {
+    GFile* file = gtk_file_chooser_get_file(chooser);
+    if (file != nullptr) {
+      gchar* raw = g_file_get_path(file);
+      if (raw != nullptr) path = std::string(raw);
+      g_free(raw);
+      g_object_unref(file);
+    }
+  }
+  g_object_unref(native);
+  return path;
+}
+
+std::optional<std::vector<std::uint8_t>> read_file_bytes(std::string const& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) return std::nullopt;
+  return std::vector<std::uint8_t>(std::istreambuf_iterator<char>(in),
+                                   std::istreambuf_iterator<char>());
+}
+
+bool write_file_bytes(std::string const& path,
+                      std::vector<std::uint8_t> const& payload) {
+  std::ofstream out(path, std::ios::binary | std::ios::trunc);
+  if (!out) return false;
+  out.write(reinterpret_cast<char const*>(payload.data()),
+            static_cast<std::streamsize>(payload.size()));
+  return static_cast<bool>(out);
+}
+
+void export_backup_async() {
+  if (g_state.api == nullptr) return;
+  auto const path = run_native_file_dialog(true);
+  if (!path.has_value()) return;
+  (void)g_state.api->backup_export_async(
+      [target = *path](rivet_app::Result<rivet::Bytes> result) {
+        auto unpacked = pb::unpack(result);
+        pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
+            [target](pb::Unpacked<rivet::Bytes>& r) {
+              if (!r.ok) {
+                show_error(r.error);
+                return;
+              }
+              if (!write_file_bytes(target, r.value)) {
+                show_error("backup file could not be written");
+                return;
+              }
+              show_success(strings().backup_export_done());
+            },
+            std::move(unpacked));
+      });
+}
+
+void confirm_restore_async(std::vector<std::uint8_t> payload);
+
+void show_restore_review(std::vector<std::uint8_t> const& payload,
+                         rivet::Bytes const& validated,
+                         std::optional<std::string> const& failure) {
+  if (g_state.sync_dialog != nullptr) {
+    gtk_window_destroy(g_state.sync_dialog);
+  }
+  payback::linux_strings::Strings const s = strings();
+  auto* dialog = gtk_dialog_new_with_buttons(
+      s.restore_review_title().c_str(), g_state.window,
+      static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL |
+                                  GTK_DIALOG_DESTROY_WITH_PARENT),
+      s.cancel().c_str(), GTK_RESPONSE_CANCEL,
+      failure.has_value() ? s.close().c_str() : s.restore_confirm().c_str(),
+      GTK_RESPONSE_ACCEPT, nullptr);
+  GtkWidget* area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+  auto* content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_set_margin_top(content, 10);
+  gtk_widget_set_margin_bottom(content, 12);
+  gtk_widget_set_margin_start(content, 18);
+  gtk_widget_set_margin_end(content, 18);
+  gtk_box_append(GTK_BOX(area), content);
+
+  if (failure.has_value()) {
+    auto* error = gtk_label_new(s.backup_invalid().c_str());
+    gtk_label_set_wrap(GTK_LABEL(error), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(error), 0.0);
+    gtk_box_append(GTK_BOX(content), error);
+    auto* detail = gtk_label_new(failure->c_str());
+    gtk_label_set_wrap(GTK_LABEL(detail), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(detail), 0.0);
+    gtk_widget_add_css_class(detail, "payback-dim");
+    gtk_box_append(GTK_BOX(content), detail);
+  } else {
+    JsonDoc doc(bytes_to_string(validated));
+    JsonObject* root = doc.root();
+    struct Stat {
+      int value;
+      std::string label;
+    };
+    std::vector<Stat> const stats = {
+        {static_cast<int>(jint(root, "replaceCount")),
+         s.restore_replaced_label()},
+        {static_cast<int>(jint(root, "importCount")),
+         s.restore_imported_label()},
+        {static_cast<int>(jint(root, "trashCount")),
+         s.restore_trash_label()},
+    };
+    for (Stat const& stat : stats) {
+      auto* row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+      auto* number = gtk_label_new(std::to_string(stat.value).c_str());
+      gtk_widget_add_css_class(number, "payback-cost");
+      gtk_box_append(GTK_BOX(row), number);
+      gtk_box_append(GTK_BOX(row),
+                     detail_label(stat.label.c_str(), "payback-meta"));
+      gtk_box_append(GTK_BOX(content), row);
+    }
+    auto* note = gtk_label_new(
+        (s.restore_prefs_note() + "\n" + s.restore_warning()).c_str());
+    gtk_label_set_wrap(GTK_LABEL(note), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(note), 0.0);
+    gtk_widget_add_css_class(note, "payback-meta");
+    gtk_box_append(GTK_BOX(content), note);
+  }
+  gtk_window_set_transient_for(GTK_WINDOW(dialog), g_state.window);
+  g_state.sync_dialog = GTK_WINDOW(dialog);
+  auto* payload_copy = new std::vector<std::uint8_t>(payload);
+  g_signal_connect(
+      dialog, "response",
+      G_CALLBACK(+[](GtkDialog* dialog, int response, gpointer user_data) {
+        std::unique_ptr<std::vector<std::uint8_t>> payload(
+            static_cast<std::vector<std::uint8_t>*>(user_data));
+        bool const confirmed = response == GTK_RESPONSE_ACCEPT;
+        gtk_window_destroy(GTK_WINDOW(dialog));
+        if (confirmed) {
+          pb::post_to_main<std::vector<std::uint8_t>>(
+              [](std::vector<std::uint8_t>& p) { confirm_restore_async(p); },
+              *payload);
+        }
+      }),
+      payload_copy);
+  gtk_window_present(GTK_WINDOW(dialog));
+}
+
+void confirm_restore_async(std::vector<std::uint8_t> payload) {
+  if (g_state.api == nullptr) return;
+  (void)g_state.api->backup_restore_async(
+      payload, [](rivet_app::Result<rivet::Bytes> result) {
+        auto unpacked = pb::unpack(result);
+        pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
+            [](pb::Unpacked<rivet::Bytes>& r) {
+              if (!r.ok) {
+                show_error(r.error);
+                return;
+              }
+              g_state.last_deleted_id.clear();
+              if (g_state.undo_button != nullptr) {
+                gtk_widget_set_visible(GTK_WIDGET(g_state.undo_button), FALSE);
+              }
+              show_success(strings().backup_restored());
+              load_all_async();
+            },
+            std::move(unpacked));
+      });
+}
+
+void restore_backup_async() {
+  if (g_state.api == nullptr) return;
+  auto const path = run_native_file_dialog(false);
+  if (!path.has_value()) return;
+  auto const payload = read_file_bytes(*path);
+  if (!payload.has_value()) {
+    show_error(strings().backup_invalid());
+    return;
+  }
+  if (payload->size() > 5 * 1024 * 1024) {
+    show_error(strings().backup_too_large());
+    return;
+  }
+  (void)g_state.api->backup_validate_async(
+      *payload, [payload = *payload](rivet_app::Result<rivet::Bytes> result) {
+        auto unpacked = pb::unpack(result);
+        pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
+            [payload](pb::Unpacked<rivet::Bytes>& r) {
+              std::optional<std::string> failure;
+              rivet::Bytes validated;
+              if (!r.ok) {
+                failure = r.error;
+              } else {
+                validated = r.value;
+              }
+              show_restore_review(payload, validated, failure);
+            },
+            std::move(unpacked));
+      });
+}
+
 void open_settings_dialog() {
   if (g_state.sync_dialog != nullptr) {
     gtk_window_present(g_state.sync_dialog);
@@ -2842,6 +3412,65 @@ void open_settings_dialog() {
   g_state.sync_warning_row = GTK_BOX(warning_row);
   gtk_box_append(GTK_BOX(enabled_box), warning_row);
   gtk_box_append(GTK_BOX(content), enabled_box);
+
+  // ----- data & recovery (2026-11 redesign, #57) -----
+  gtk_box_append(GTK_BOX(content),
+                 detail_label(s.section_data_recovery().c_str(),
+                              "payback-section"));
+  {
+    auto* row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    auto* caption = gtk_label_new(s.backup_export_help().c_str());
+    gtk_label_set_wrap(GTK_LABEL(caption), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(caption), 0.0);
+    gtk_widget_set_hexpand(caption, TRUE);
+    gtk_widget_add_css_class(caption, "payback-dim");
+    gtk_box_append(GTK_BOX(row), caption);
+    auto* button = gtk_button_new_with_label(s.backup_export_button().c_str());
+    g_signal_connect(button, "clicked",
+                     G_CALLBACK(+[](GtkButton*, gpointer) {
+                       export_backup_async();
+                     }),
+                     nullptr);
+    gtk_box_append(GTK_BOX(row), button);
+    gtk_box_append(GTK_BOX(content), row);
+  }
+  {
+    auto* row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    auto* caption = gtk_label_new(s.restore_row_help().c_str());
+    gtk_label_set_wrap(GTK_LABEL(caption), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(caption), 0.0);
+    gtk_widget_set_hexpand(caption, TRUE);
+    gtk_widget_add_css_class(caption, "payback-dim");
+    gtk_box_append(GTK_BOX(row), caption);
+    auto* button = gtk_button_new_with_label(s.choose_backup_button().c_str());
+    g_signal_connect(button, "clicked",
+                     G_CALLBACK(+[](GtkButton*, gpointer) {
+                       restore_backup_async();
+                     }),
+                     nullptr);
+    gtk_box_append(GTK_BOX(row), button);
+    gtk_box_append(GTK_BOX(content), row);
+  }
+  {
+    auto* row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    std::string const caption =
+        replace_all_copy(s.trash_row_help(), "{count}",
+                         std::to_string(g_state.document.trash_count));
+    auto* label = gtk_label_new(caption.c_str());
+    gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+    gtk_widget_set_hexpand(label, TRUE);
+    gtk_widget_add_css_class(label, "payback-dim");
+    gtk_box_append(GTK_BOX(row), label);
+    auto* button = gtk_button_new_with_label(s.trash_view().c_str());
+    g_signal_connect(button, "clicked",
+                     G_CALLBACK(+[](GtkButton*, gpointer) {
+                       load_trash_async(true);
+                     }),
+                     nullptr);
+    gtk_box_append(GTK_BOX(row), button);
+    gtk_box_append(GTK_BOX(content), row);
+  }
 
   // default currency: saved through the existing save-settings RPC, whose
   // result is the merged settings — fold it back into the in-memory doc
@@ -3101,10 +3730,17 @@ void on_language_changed(GtkComboBox* box, gpointer) {
 
 void apply_language() {
   payback::linux_strings::Strings const s = strings();
-  gtk_label_set_text(g_state.total_spent_label, s.total_spent().c_str());
-  gtk_label_set_text(g_state.earned_back_label, s.earned_back().c_str());
-  gtk_label_set_text(g_state.overall_daily_label, s.overall_daily().c_str());
-  gtk_label_set_text(g_state.device_count_label, s.device_count().c_str());
+  // 2026-11 redesign summary copy; the earned tile and quips are retired
+  gtk_label_set_text(g_state.investment_eyebrow,
+                     replace_all_copy(s.investment_eyebrow(), "{currency}",
+                                      g_state.document.currency)
+                         .c_str());
+  gtk_label_set_text(g_state.summary_caption, s.investment_caption().c_str());
+  gtk_label_set_text(g_state.daily_total_label, s.daily_cost_total().c_str());
+  gtk_label_set_text(g_state.devices_tracked_label,
+                     s.devices_tracked().c_str());
+  gtk_label_set_text(g_state.mixed_note, s.mixed_currency_note().c_str());
+  gtk_button_set_label(g_state.undo_button, s.undo().c_str());
   gtk_button_set_label(g_state.add_button, ("＋ " + s.add_device()).c_str());
   // detail actions live in the headerbar (mac toolbar parity); tooltips
   // carry the labels since the buttons are icon-only
@@ -3122,7 +3758,7 @@ void apply_language() {
   }
   if (g_state.empty_add_button != nullptr) {
     gtk_button_set_label(g_state.empty_add_button,
-                         ("＋ " + s.add_device()).c_str());
+                         ("＋ " + s.add_first_device()).c_str());
   }
   if (g_state.help_menu != nullptr) {
     g_menu_remove_all(g_state.help_menu);
@@ -3140,8 +3776,8 @@ void apply_language() {
   gtk_combo_box_text_remove(sort, 0);
   gtk_combo_box_text_remove(sort, 0);
   gtk_combo_box_text_insert_text(sort, 0, s.sort_added().c_str());
-  gtk_combo_box_text_insert_text(sort, 1, s.sort_daily_cost().c_str());
-  gtk_combo_box_text_insert_text(sort, 2, s.sort_payback().c_str());
+  gtk_combo_box_text_insert_text(sort, 1, s.sort_date().c_str());
+  gtk_combo_box_text_insert_text(sort, 2, s.sort_daily_cost().c_str());
   gtk_combo_box_set_active(GTK_COMBO_BOX(sort), g_state.sort_mode);
   render_document_from_cache();
   // the settings dialog is rebuilt wholesale so no stale caption survives a
@@ -3264,20 +3900,6 @@ void start_backend() {
 }
 
 // -------------------------------------------------------------- ui build
-
-GtkWidget* summary_tile(GtkLabel** value_out, GtkLabel** label_out) {
-  auto* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-  auto* label = gtk_label_new("");
-  gtk_widget_set_halign(label, GTK_ALIGN_START);
-  gtk_widget_add_css_class(label, "payback-dim");
-  auto* value = gtk_label_new("—");
-  gtk_widget_set_halign(value, GTK_ALIGN_START);
-  gtk_box_append(GTK_BOX(box), label);
-  gtk_box_append(GTK_BOX(box), value);
-  *value_out = GTK_LABEL(value);
-  *label_out = GTK_LABEL(label);
-  return box;
-}
 
 void on_sort_changed(GtkComboBox* box, gpointer) {
   int const index = gtk_combo_box_get_active(box);
@@ -3460,39 +4082,75 @@ void on_activate(GtkApplication* app, gpointer) {
   auto* sidebar = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
   gtk_widget_set_size_request(sidebar, 300, -1);
 
-  // summary strip: 2×2 so a narrow window reflows the tiles instead of
-  // clipping them off the right edge (matches the compact grid the macOS
-  // sidebar uses)
-  auto* summary = gtk_grid_new();
-  gtk_grid_set_column_spacing(GTK_GRID(summary), 24);
-  gtk_grid_set_row_spacing(GTK_GRID(summary), 8);
-  gtk_grid_set_column_homogeneous(GTK_GRID(summary), TRUE);
-  gtk_widget_set_margin_top(summary, 14);
-  gtk_widget_set_margin_bottom(summary, 2);
-  gtk_widget_set_margin_start(summary, 16);
-  gtk_widget_set_margin_end(summary, 16);
-  gtk_grid_attach(GTK_GRID(summary),
-                  summary_tile(&g_state.total_spent, &g_state.total_spent_label),
-                  0, 0, 1, 1);
-  gtk_grid_attach(GTK_GRID(summary),
-                  summary_tile(&g_state.earned_back, &g_state.earned_back_label),
-                  1, 0, 1, 1);
-  gtk_grid_attach(GTK_GRID(summary),
-                  summary_tile(&g_state.overall_daily,
-                               &g_state.overall_daily_label),
-                  0, 1, 1, 1);
-  gtk_grid_attach(GTK_GRID(summary),
-                  summary_tile(&g_state.device_count, &g_state.device_count_label),
-                  1, 1, 1, 1);
-  gtk_box_append(GTK_BOX(sidebar), summary);
+  // 2026-11 redesign summary: investment hero + two mini stats; the
+  // earned tile and the rotating quips are retired with the terminology
+  // contract (design/DESIGN.md)
+  auto* summary = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+  gtk_widget_set_margin_top(summary, 16);
+  gtk_widget_set_margin_bottom(summary, 8);
+  gtk_widget_set_margin_start(summary, 18);
+  gtk_widget_set_margin_end(summary, 18);
 
-  auto* quip = gtk_label_new("");
-  gtk_widget_set_halign(quip, GTK_ALIGN_START);
-  gtk_widget_set_margin_start(quip, 20);
-  gtk_widget_set_margin_bottom(quip, 6);
-  gtk_widget_add_css_class(quip, "payback-quip");
-  g_state.quip = GTK_LABEL(quip);
-  gtk_box_append(GTK_BOX(sidebar), quip);
+  {
+    auto* eyebrow = gtk_label_new("");
+    gtk_widget_set_halign(eyebrow, GTK_ALIGN_START);
+    gtk_label_set_ellipsize(GTK_LABEL(eyebrow), PANGO_ELLIPSIZE_END);
+    gtk_widget_add_css_class(eyebrow, "payback-meta");
+    g_state.investment_eyebrow = GTK_LABEL(eyebrow);
+    gtk_box_append(GTK_BOX(summary), eyebrow);
+    auto* hero = gtk_label_new("—");
+    gtk_widget_set_halign(hero, GTK_ALIGN_START);
+    gtk_widget_add_css_class(hero, "payback-summary-hero");
+    g_state.total_spent = GTK_LABEL(hero);
+    gtk_box_append(GTK_BOX(summary), hero);
+    auto* caption = gtk_label_new("");
+    gtk_widget_set_halign(caption, GTK_ALIGN_START);
+    gtk_label_set_wrap(GTK_LABEL(caption), TRUE);
+    gtk_widget_add_css_class(caption, "payback-meta");
+    g_state.summary_caption = GTK_LABEL(caption);
+    gtk_box_append(GTK_BOX(summary), caption);
+  }
+  {
+    auto* stats = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
+    gtk_widget_set_margin_top(stats, 14);
+    auto* daily_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    auto* daily_value = gtk_label_new("—");
+    gtk_widget_set_halign(daily_value, GTK_ALIGN_START);
+    gtk_widget_add_css_class(daily_value, "payback-mini-value");
+    g_state.daily_total = GTK_LABEL(daily_value);
+    gtk_box_append(GTK_BOX(daily_box), daily_value);
+    auto* daily_label = gtk_label_new("");
+    gtk_widget_set_halign(daily_label, GTK_ALIGN_START);
+    gtk_label_set_ellipsize(GTK_LABEL(daily_label), PANGO_ELLIPSIZE_END);
+    gtk_widget_add_css_class(daily_label, "payback-meta");
+    g_state.daily_total_label = GTK_LABEL(daily_label);
+    gtk_box_append(GTK_BOX(daily_box), daily_label);
+    gtk_box_append(GTK_BOX(stats), daily_box);
+    auto* count_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    auto* count_value = gtk_label_new("0");
+    gtk_widget_set_halign(count_value, GTK_ALIGN_START);
+    gtk_widget_add_css_class(count_value, "payback-mini-value");
+    g_state.device_count = GTK_LABEL(count_value);
+    gtk_box_append(GTK_BOX(count_box), count_value);
+    auto* count_label = gtk_label_new("");
+    gtk_widget_set_halign(count_label, GTK_ALIGN_START);
+    gtk_widget_add_css_class(count_label, "payback-meta");
+    g_state.devices_tracked_label = GTK_LABEL(count_label);
+    gtk_box_append(GTK_BOX(count_box), count_label);
+    gtk_box_append(GTK_BOX(stats), count_box);
+    gtk_box_append(GTK_BOX(summary), stats);
+  }
+  {
+    auto* note = gtk_label_new("");
+    gtk_widget_set_halign(note, GTK_ALIGN_START);
+    gtk_label_set_wrap(GTK_LABEL(note), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(note), 0.0);
+    gtk_widget_add_css_class(note, "payback-meta");
+    gtk_widget_set_visible(note, FALSE);
+    g_state.mixed_note = GTK_LABEL(note);
+    gtk_box_append(GTK_BOX(summary), note);
+  }
+  gtk_box_append(GTK_BOX(sidebar), summary);
 
   auto* list_scrolled = gtk_scrolled_window_new();
   gtk_widget_set_vexpand(list_scrolled, TRUE);
@@ -3549,6 +4207,14 @@ void on_activate(GtkApplication* app, gpointer) {
   g_signal_connect(status_close, "clicked",
                    G_CALLBACK(on_status_close_clicked), nullptr);
   gtk_box_append(GTK_BOX(status_box), status_label);
+  // the delete toast's 撤销: reinstates the tombstoned record
+  auto* undo_button = gtk_button_new_with_label("撤销");
+  gtk_widget_add_css_class(undo_button, "flat");
+  gtk_widget_set_visible(undo_button, FALSE);
+  g_signal_connect(undo_button, "clicked", G_CALLBACK(on_undo_clicked),
+                   nullptr);
+  g_state.undo_button = GTK_BUTTON(undo_button);
+  gtk_box_append(GTK_BOX(status_box), undo_button);
   gtk_box_append(GTK_BOX(status_box), status_close);
   gtk_revealer_set_child(GTK_REVEALER(status_revealer), status_box);
   g_state.status_bar = GTK_REVEALER(status_revealer);
@@ -3559,7 +4225,7 @@ void on_activate(GtkApplication* app, gpointer) {
   auto* empty_state = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
   gtk_widget_set_halign(empty_state, GTK_ALIGN_CENTER);
   gtk_widget_set_valign(empty_state, GTK_ALIGN_CENTER);
-  auto* empty_emoji = gtk_label_new("💰");
+  auto* empty_emoji = gtk_label_new("📦");
   gtk_widget_add_css_class(empty_emoji, "payback-empty-emoji");
   gtk_box_append(GTK_BOX(empty_state), empty_emoji);
   auto* empty_title = gtk_label_new("");
@@ -3587,7 +4253,6 @@ void on_activate(GtkApplication* app, gpointer) {
   apply_css();
   apply_language();
   gtk_window_present(GTK_WINDOW(window));
-  g_state.quip_day = day_of_year();
   start_backend();
 }
 

@@ -276,6 +276,7 @@ struct Strings {
   std::wstring companion_window_i_d_field() const { return zh ? L"配对窗口 ID（桌面端设置里复制）" : L"Pairing window ID (copy from desktop settings)"; }
   std::wstring companion_pair() const { return zh ? L"配对" : L"Pair"; }
   std::wstring companion_reconnect() const { return zh ? L"重新连接" : L"Reconnect"; }
+  std::wstring backup_export_done() const { return zh ? L"备份已导出" : L"Backup exported"; }
 };
 
 inline Strings const& strings() {

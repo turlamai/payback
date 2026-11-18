@@ -1022,5 +1022,9 @@
   "companionReconnect": {
     "zh": "重新连接",
     "en": "Reconnect"
+  },
+  "backupExportDone": {
+    "zh": "备份已导出",
+    "en": "Backup exported"
   }
 }

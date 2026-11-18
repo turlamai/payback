@@ -269,6 +269,7 @@ struct Strings {
   std::string companion_window_i_d_field() const { return zh ? "配对窗口 ID（桌面端设置里复制）" : "Pairing window ID (copy from desktop settings)"; }
   std::string companion_pair() const { return zh ? "配对" : "Pair"; }
   std::string companion_reconnect() const { return zh ? "重新连接" : "Reconnect"; }
+  std::string backup_export_done() const { return zh ? "备份已导出" : "Backup exported"; }
 };
 
 }  // namespace payback::linux_strings
