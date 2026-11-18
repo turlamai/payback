@@ -280,6 +280,7 @@ enum L10n {
         case companionWindowIDField
         case companionPair
         case companionReconnect
+        case backupExportDone
 
         var zh: String {
             switch self {
@@ -539,6 +540,7 @@ enum L10n {
             case .companionWindowIDField: return "配对窗口 ID（桌面端设置里复制）"
             case .companionPair: return "配对"
             case .companionReconnect: return "重新连接"
+            case .backupExportDone: return "备份已导出"
             }
         }
 
@@ -800,6 +802,7 @@ enum L10n {
             case .companionWindowIDField: return "Pairing window ID (copy from desktop settings)"
             case .companionPair: return "Pair"
             case .companionReconnect: return "Reconnect"
+            case .backupExportDone: return "Backup exported"
             }
         }
     }
