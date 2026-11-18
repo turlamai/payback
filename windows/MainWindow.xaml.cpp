@@ -13,6 +13,7 @@
 #include <shobjidl_core.h>  // IInitializeWithWindow: pickers need an owner HWND
 #include "winrt/Windows.Foundation.Collections.h"  // single_threaded_vector
 #include "winrt/Windows.Storage.Pickers.h"  // backup save/open pickers
+#include "winrt/Windows.Storage.Streams.h"  // DataReader over the picked backup
 
 namespace winrt::RivetHost::implementation {
 namespace {
