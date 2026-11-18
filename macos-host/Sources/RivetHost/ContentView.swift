@@ -5,6 +5,16 @@ import SwiftUI
 // settings entry; the workspace is the nonmodal detail pane. Delete is a
 // tombstone with an undo toast (docs/data-format.md "Trash").
 
+
+/// e2e render breadcrumb (issue #64): under PAYBACK_E2E=1 the x64 runner
+/// aborts inside Metal during a post-startup render; these probes mark the
+/// block that rendered last before the abort.
+func paybackRenderProbe(_ tag: String) {
+    if ProcessInfo.processInfo.environment["PAYBACK_E2E"] == "1" {
+        FileHandle.standardError.write(Data("payback: render \(tag)\n".utf8))
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.openSettings) private var openSettings
@@ -47,6 +57,7 @@ struct ContentView: View {
     }
 
     var body: some View {
+        paybackRenderProbe("content.body")
         content
             .background(PaybackTheme.paper)
             .preferredColorScheme(model.theme.colorScheme)
@@ -171,6 +182,7 @@ struct ContentView: View {
     }
 
     private var sidebar: some View {
+        paybackRenderProbe("sidebar")
         VStack(spacing: 20) {
             brandHeader
             SummaryBlock(summary: model.summary,
