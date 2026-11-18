@@ -18,7 +18,7 @@ concurrency:
 # Single source of truth for the rivet pin; every install step below
 # references this so a bump is one edit, not a grep-replace across jobs.
 env:
-  RIVET_PIN: a431e8eb255976655e1ce58a7ae184423e203c28
+  RIVET_PIN: v0.17.0
 jobs:
   backend:
     name: Racket backend (${{ matrix.os }})
@@ -92,7 +92,7 @@ jobs:
         # Literal pin: `uses:` does not expand env, so this cannot read
         # RIVET_PIN — bump it in tandem with RIVET_PIN above (one release,
         # two edits).
-        uses: turlamai/rivet/.github/actions/setup-embed-racket@a431e8eb255976655e1ce58a7ae184423e203c28
+        uses: turlamai/rivet/.github/actions/setup-embed-racket@v0.17.0
       # Installed after the embeddable runtime so the catalog dependency
       # closure (cext-lib, crypto-lib, keel) resolves against the minimal
       # build — it ships no packages of its own.
