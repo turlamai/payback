@@ -129,11 +129,9 @@ payback/
   add naively.
 - No CSV export yet — the JSON file is the export, for now.
 
-## Commercial path
+## Product development
 
-All delivered editions remain free; previous desktop Pro and presale plans are retired.
-[PRICING.md](PRICING.md) distinguishes the new policy from the legacy device
-gate still present in existing builds. Future mobile editions will also be free when delivered; no mobile presale is planned.
+Payback is focused on reliable data entry, backup, native interaction and updates. No purchase, commercial entitlement or device-count paywall is planned. Some older builds had legacy device limits; verify migration and removal before treating a particular binary as unrestricted.
 
 ## License
 
