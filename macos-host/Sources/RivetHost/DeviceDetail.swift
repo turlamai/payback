@@ -91,17 +91,12 @@ struct DeviceDetail: View {
     @ViewBuilder
     private var hero: some View {
         paybackDetailProbe("hero")
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 32) {
-                heroLeft
-                Divider()
-                heroRight
-            }
-            VStack(alignment: .leading, spacing: 24) {
-                heroLeft
-                Divider()
-                heroRight
-            }
+        // horizontal at the window floor; the stacked variant only matters
+        // below the 768px breakpoint, which the macOS window never reaches
+        HStack(alignment: .top, spacing: 32) {
+            heroLeft
+            Divider()
+            heroRight
         }
         .padding(.horizontal, 32)
         .padding(.vertical, 28)
@@ -176,18 +171,13 @@ struct DeviceDetail: View {
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 12)
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(PaybackTheme.line)
-                        Capsule()
-                            .fill(computed.paidBack ? PaybackTheme.earn : PaybackTheme.accent)
-                            .frame(width: geometry.size.width
-                                   * CGFloat(min(max(computed.paybackProgress ?? 0, 0), 1)))
-                    }
-                }
-                .frame(height: 6)
-                .padding(.top, 16)
+                // plain native bar: a GeometryReader-driven fill forces a
+                // Metal compositing pass on the GPU-less x64 CI runner
+                // (issue #64)
+                ProgressView(value: min(max(computed.paybackProgress ?? 0, 0), 1))
+                    .progressViewStyle(.linear)
+                    .tint(computed.paidBack ? PaybackTheme.earn : PaybackTheme.accent)
+                    .padding(.top, 14)
                 .accessibilityElement()
                 .accessibilityLabel(Text(L10n.t(.paybackProgress)))
                 .accessibilityValue(Text(String(
@@ -318,18 +308,12 @@ struct DeviceDetail: View {
 
     // MARK: bottom grid
 
-    @ViewBuilder
     private var bottomGrid: some View {
-        let width: CGFloat = 40
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: width) {
-                milestoneSection.frame(maxWidth: .infinity, alignment: .leading)
-                methodSection.frame(maxWidth: .infinity, alignment: .leading)
-            }
-            VStack(alignment: .leading, spacing: 32) {
-                milestoneSection
-                methodSection
-            }
+        // fixed two-column at the desktop width (the 768-1100 stacked rule
+        // is a browser-only breakpoint; see the comment on `hero`)
+        HStack(alignment: .top, spacing: 40) {
+            milestoneSection.frame(maxWidth: .infinity, alignment: .leading)
+            methodSection.frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.top, 32)
     }
