@@ -6,14 +6,11 @@
 #include "GeneratedBackend.hpp"
 #include "HostHelpers.h"
 
-<<<<<<< HEAD
-#include "winrt/Windows.Storage.Pickers.h"  // backup save/open pickers
-
-=======
 #include <algorithm>
->>>>>>> leg/win-retrofit
 #include <cmath>
 #include <stdexcept>
+
+#include "winrt/Windows.Storage.Pickers.h"  // backup save/open pickers
 
 namespace winrt::RivetHost::implementation {
 namespace {
