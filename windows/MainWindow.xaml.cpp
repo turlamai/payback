@@ -10,6 +10,8 @@
 #include <cmath>
 #include <stdexcept>
 
+#include <shobjidl_core.h>  // IInitializeWithWindow: pickers need an owner HWND
+#include "winrt/Windows.Foundation.Collections.h"  // single_threaded_vector
 #include "winrt/Windows.Storage.Pickers.h"  // backup save/open pickers
 
 namespace winrt::RivetHost::implementation {
@@ -1769,7 +1771,7 @@ void MainWindow::LoadTrashAsync(bool show_after) {
   }
   try {
     rivet_app::API api(*backend);
-    (void)api.trash_list_async([dispatcher, weak](
+    (void)api.trash_list_async([dispatcher, weak, show_after](
                                    rivet_app::Result<rivet::Bytes> result) {
       std::vector<std::uint8_t> payload;
       std::string failure;
@@ -1903,7 +1905,8 @@ void MainWindow::ExportBackupAsync() {
     picker.SuggestedStartLocation(
         winrt::Windows::Storage::Pickers::PickerLocationId::DocumentsLibrary);
     picker.SuggestedFileName(L"payback-backup");
-    picker.FileTypeChoices().Insert(L"JSON", std::vector<winrt::hstring>{L".json"});
+    picker.FileTypeChoices().Insert(
+        L"JSON", winrt::single_threaded_vector<winrt::hstring>({L".json"}));
     auto const initialize_with_window = picker.as<::IInitializeWithWindow>();
     auto hwnd = ::GetActiveWindow();
     if (hwnd == nullptr) {
