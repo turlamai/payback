@@ -673,6 +673,10 @@ void load_trash_async(bool show_after);
 void show_trash_dialog();
 void export_backup_async();
 void restore_backup_async();
+void show_restore_review(std::vector<std::uint8_t> const& payload,
+                         rivet::Bytes const& validated,
+                         std::optional<std::string> const& failure);
+void confirm_restore_async(std::vector<std::uint8_t> payload);
 void request_sync_state();
 void on_sync_machine_entry_changed(GtkEditable* editable, gpointer user_data);
 void begin_enable_sync();
