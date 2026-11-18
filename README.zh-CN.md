@@ -1,5 +1,7 @@
 # Payback
 
+**产品：**[产品主页](https://payback.jrtx.site/) · **支持：**[问题与反馈](https://github.com/turlamai/payback/issues) · [当前交付策略](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.zh-CN.md)
+
 每一台设备，都在一天天回本。记下购买价格，Payback 帮你算每日成本——再设定「这台设备一天值多少钱」，看回本进度一点点走满。
 
 [![release](https://img.shields.io/github/v/release/turlamai/payback)](https://github.com/turlamai/payback/releases/latest) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey) [![CI](https://github.com/turlamai/payback/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/payback/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
