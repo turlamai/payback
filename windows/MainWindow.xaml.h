@@ -37,6 +37,7 @@ struct MainWindow : MainWindowT<MainWindow> {
   void RestoreBackupAsync();
 
  private:
+  struct DeviceRow;
   winrt::fire_and_forget InitializeBackendAsync();
   void SetReadyUi();
   void SetErrorUi(std::string const& message);

@@ -417,32 +417,7 @@ void MainWindow::RenderSummary() {
 
 // Mixed portfolios never show one combined money value: the backend nulls
 // the combined scalars and the tiles join the per-currency groups (#23).
-std::wstring MainWindow::joined_spent() const {
-  std::wstring joined;
-  for (auto const& group : document_.currency_groups) {
-    if (!joined.empty()) joined += L" · ";
-    joined += money(static_cast<double>(group.total_spent_minor), group.currency);
-  }
-  return joined;
-}
 
-std::wstring MainWindow::joined_earned() const {
-  std::wstring joined;
-  for (auto const& group : document_.currency_groups) {
-    if (!joined.empty()) joined += L" · ";
-    joined += money(group.earned_total_minor, group.currency);
-  }
-  return joined;
-}
-
-std::wstring MainWindow::joined_daily() const {
-  std::wstring joined;
-  for (auto const& group : document_.currency_groups) {
-    if (!joined.empty()) joined += L" · ";
-    joined += per_day(group.daily_cost_sum_minor, group.currency);
-  }
-  return joined;
-}
 
 // ---------- sidebar: device rows ----------------------------------------------
 
