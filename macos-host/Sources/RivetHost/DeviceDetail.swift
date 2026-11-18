@@ -6,10 +6,11 @@ import SwiftUI
 // Amounts and derived values come from the engine's computed block; the
 // host only formats and lays out.
 
-func paybackDetailProbe(_ tag: String) {
+func paybackDetailProbe(_ tag: String) -> EmptyView {
     if ProcessInfo.processInfo.environment["PAYBACK_E2E"] == "1" {
         FileHandle.standardError.write(Data("payback: render detail.\(tag)\n".utf8))
     }
+    return EmptyView()
 }
 
 struct DeviceDetail: View {
@@ -19,7 +20,7 @@ struct DeviceDetail: View {
     var onDelete: () -> Void = {}
 
     var body: some View {
-        paybackDetailProbe(""body"")
+        paybackDetailProbe("body")
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 deviceHead
@@ -41,8 +42,9 @@ struct DeviceDetail: View {
 
     // MARK: head
 
+    @ViewBuilder
     private var deviceHead: some View {
-        paybackDetailProbe(""head"")
+        paybackDetailProbe("head")
         HStack(alignment: .top, spacing: 24) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("\(CategoryLabel.label(for: device.category)) · "
@@ -86,8 +88,9 @@ struct DeviceDetail: View {
     /// the prototype's .hero: left = today's daily cost, right = the
     /// personal value goal. Stacks vertically on narrow windows
     /// (768–1100px contract in DESIGN.md).
+    @ViewBuilder
     private var hero: some View {
-        paybackDetailProbe(""hero"")
+        paybackDetailProbe("hero")
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .top, spacing: 32) {
                 heroLeft
@@ -262,8 +265,9 @@ struct DeviceDetail: View {
 
     // MARK: chart
 
+    @ViewBuilder
     private var chartSection: some View {
-        paybackDetailProbe(""curve"")
+        paybackDetailProbe("curve")
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 Text(L10n.t(.chartTitle))
@@ -330,8 +334,9 @@ struct DeviceDetail: View {
         .padding(.top, 32)
     }
 
+    @ViewBuilder
     private var milestoneSection: some View {
-        paybackDetailProbe(""milestones"")
+        paybackDetailProbe("milestones")
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L10n.t(.milestonesTitle))
@@ -416,8 +421,9 @@ struct DeviceDetail: View {
         }
     }
 
+    @ViewBuilder
     private var methodSection: some View {
-        paybackDetailProbe(""method"")
+        paybackDetailProbe("method")
         VStack(alignment: .leading, spacing: 16) {
             Text(L10n.t(.methodTitle))
                 .font(.system(size: 20, weight: .semibold))

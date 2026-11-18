@@ -9,10 +9,11 @@ import SwiftUI
 /// e2e render breadcrumb (issue #64): under PAYBACK_E2E=1 the x64 runner
 /// aborts inside Metal during a post-startup render; these probes mark the
 /// block that rendered last before the abort.
-func paybackRenderProbe(_ tag: String) {
+func paybackRenderProbe(_ tag: String) -> EmptyView {
     if ProcessInfo.processInfo.environment["PAYBACK_E2E"] == "1" {
         FileHandle.standardError.write(Data("payback: render \(tag)\n".utf8))
     }
+    return EmptyView()
 }
 
 struct ContentView: View {
@@ -181,6 +182,7 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
     private var sidebar: some View {
         paybackRenderProbe("sidebar")
         VStack(spacing: 20) {
