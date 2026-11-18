@@ -3088,51 +3088,6 @@ void show_trash_dialog() {
 
 // the save/open choosers are their own dialogs; GtkFileChooserNative keeps
 // them out of the app window's transient chain
-std::optional<std::string> run_native_file_dialog(bool save) {
-  std::optional<std::string> path;
-  GtkFileChooserNative* native =
-      gtk_file_chooser_native_new(save ? "Save backup" : "Choose backup",
-                                  g_state.window,
-                                  save ? GTK_FILE_CHOOSER_ACTION_SAVE
-                                       : GTK_FILE_CHOOSER_ACTION_OPEN,
-                                  save ? "Save" : "Open", "Cancel");
-  GtkFileChooser* chooser = GTK_FILE_CHOOSER(native);
-  if (save) {
-    std::string const stamp = [] {
-      GDateTime* now = g_date_time_new_now_local();
-      std::string const text = g_date_time_format(now, "%Y-%m-%d");
-      g_date_time_unref(now);
-      return text;
-    }();
-    gtk_file_chooser_set_current_name(
-        chooser, ("payback-backup-" + stamp + ".json").c_str());
-  } else {
-    GtkFileFilter* filter = gtk_file_filter_new();
-    gtk_file_filter_set_name(filter, "JSON");
-    gtk_file_filter_add_pattern(filter, "*.json");
-    gtk_file_chooser_add_filter(chooser, filter);
-  }
-  gint const response = gtk_native_dialog_run(GTK_NATIVE_DIALOG(native));
-  if (response == GTK_RESPONSE_ACCEPT) {
-    GFile* file = gtk_file_chooser_get_file(chooser);
-    if (file != nullptr) {
-      gchar* raw = g_file_get_path(file);
-      if (raw != nullptr) path = std::string(raw);
-      g_free(raw);
-      g_object_unref(file);
-    }
-  }
-  g_object_unref(native);
-  return path;
-}
-
-std::optional<std::vector<std::uint8_t>> read_file_bytes(std::string const& path) {
-  std::ifstream in(path, std::ios::binary);
-  if (!in) return std::nullopt;
-  return std::vector<std::uint8_t>(std::istreambuf_iterator<char>(in),
-                                   std::istreambuf_iterator<char>());
-}
-
 bool write_file_bytes(std::string const& path,
                       std::vector<std::uint8_t> const& payload) {
   std::ofstream out(path, std::ios::binary | std::ios::trunc);
@@ -3142,27 +3097,120 @@ bool write_file_bytes(std::string const& path,
   return static_cast<bool>(out);
 }
 
+std::optional<std::vector<std::uint8_t>> read_file_bytes(std::string const& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) return std::nullopt;
+  return std::vector<std::uint8_t>(std::istreambuf_iterator<char>(in),
+                                   std::istreambuf_iterator<char>());
+}
+
+std::string file_dialog_stamp() {
+  GDateTime* now = g_date_time_new_now_local();
+  std::string const text = g_date_time_format(now, "%Y-%m-%d");
+  g_date_time_unref(now);
+  return text;
+}
+
+// GTK 4.10 removed the blocking gtk_native_dialog_run: the choosers run
+// through their response signal, and each flow continues from there.
 void export_backup_async() {
   if (g_state.api == nullptr) return;
-  auto const path = run_native_file_dialog(true);
-  if (!path.has_value()) return;
-  (void)g_state.api->backup_export_async(
-      [target = *path](rivet_app::Result<rivet::Bytes> result) {
-        auto unpacked = pb::unpack(result);
-        pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
-            [target](pb::Unpacked<rivet::Bytes>& r) {
-              if (!r.ok) {
-                show_error(r.error);
-                return;
-              }
-              if (!write_file_bytes(target, r.value)) {
-                show_error("backup file could not be written");
-                return;
-              }
-              show_success(strings().backup_export_done());
-            },
-            std::move(unpacked));
-      });
+  auto* native = gtk_file_chooser_native_new(
+      "Save backup", g_state.window, GTK_FILE_CHOOSER_ACTION_SAVE, "Save",
+      "Cancel");
+  gtk_file_chooser_set_current_name(
+      GTK_FILE_CHOOSER(native),
+      ("payback-backup-" + file_dialog_stamp() + ".json").c_str());
+  g_signal_connect(
+      native, "response",
+      G_CALLBACK(+[](GtkNativeDialog* native, int response, gpointer) {
+        if (response != GTK_RESPONSE_ACCEPT) {
+          g_object_unref(native);
+          return;
+        }
+        GFile* file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(native));
+        gchar* raw = file != nullptr ? g_file_get_path(file) : nullptr;
+        std::string const target = raw != nullptr ? raw : "";
+        if (raw != nullptr) g_free(raw);
+        if (file != nullptr) g_object_unref(file);
+        g_object_unref(native);
+        if (target.empty() || g_state.api == nullptr) return;
+        (void)g_state.api->backup_export_async(
+            [target](rivet_app::Result<rivet::Bytes> result) {
+              auto unpacked = pb::unpack(result);
+              pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
+                  [target](pb::Unpacked<rivet::Bytes>& r) {
+                    if (!r.ok) {
+                      show_error(r.error);
+                      return;
+                    }
+                    if (!write_file_bytes(target, r.value)) {
+                      show_error("backup file could not be written");
+                      return;
+                    }
+                    show_success(strings().backup_export_done());
+                  },
+                  std::move(unpacked));
+            });
+      }),
+      nullptr);
+  gtk_native_dialog_show(GTK_NATIVE_DIALOG(native));
+}
+
+void restore_backup_async() {
+  if (g_state.api == nullptr) return;
+  auto* native = gtk_file_chooser_native_new(
+      "Choose backup", g_state.window, GTK_FILE_CHOOSER_ACTION_OPEN, "Open",
+      "Cancel");
+  GtkFileFilter* filter = gtk_file_filter_new();
+  gtk_file_filter_set_name(filter, "JSON");
+  gtk_file_filter_add_pattern(filter, "*.json");
+  gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(native), filter);
+  g_signal_connect(
+      native, "response",
+      G_CALLBACK(+[](GtkNativeDialog* native, int response, gpointer) {
+        if (response != GTK_RESPONSE_ACCEPT) {
+          g_object_unref(native);
+          return;
+        }
+        GFile* file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(native));
+        gchar* raw = file != nullptr ? g_file_get_path(file) : nullptr;
+        std::string const target = raw != nullptr ? raw : "";
+        if (raw != nullptr) g_free(raw);
+        if (file != nullptr) g_object_unref(file);
+        g_object_unref(native);
+        if (target.empty() || g_state.api == nullptr) return;
+        auto const payload = read_file_bytes(target);
+        if (!payload.has_value()) {
+          pb::post_to_main<int>(
+              [](int&) { show_error(strings().backup_invalid()); }, 0);
+          return;
+        }
+        if (payload->size() > 5 * 1024 * 1024) {
+          pb::post_to_main<int>(
+              [](int&) { show_error(strings().backup_too_large()); }, 0);
+          return;
+        }
+        (void)g_state.api->backup_validate_async(
+            *payload,
+            [payload = *payload](rivet_app::Result<rivet::Bytes> result) {
+              auto unpacked = pb::unpack(result);
+              pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
+                  [payload](pb::Unpacked<rivet::Bytes>& r) {
+                    std::optional<std::string> failure;
+                    rivet::Bytes validated;
+                    if (!r.ok) {
+                      failure = r.error;
+                    } else {
+                      validated = r.value;
+                    }
+                    show_restore_review(payload, validated, failure);
+                  },
+                  std::move(unpacked));
+            });
+      }),
+      nullptr);
+  gtk_native_dialog_show(GTK_NATIVE_DIALOG(native));
 }
 
 void confirm_restore_async(std::vector<std::uint8_t> payload);
@@ -3267,37 +3315,6 @@ void confirm_restore_async(std::vector<std::uint8_t> payload) {
               }
               show_success(strings().backup_restored());
               load_all_async();
-            },
-            std::move(unpacked));
-      });
-}
-
-void restore_backup_async() {
-  if (g_state.api == nullptr) return;
-  auto const path = run_native_file_dialog(false);
-  if (!path.has_value()) return;
-  auto const payload = read_file_bytes(*path);
-  if (!payload.has_value()) {
-    show_error(strings().backup_invalid());
-    return;
-  }
-  if (payload->size() > 5 * 1024 * 1024) {
-    show_error(strings().backup_too_large());
-    return;
-  }
-  (void)g_state.api->backup_validate_async(
-      *payload, [payload = *payload](rivet_app::Result<rivet::Bytes> result) {
-        auto unpacked = pb::unpack(result);
-        pb::post_to_main<pb::Unpacked<rivet::Bytes>>(
-            [payload](pb::Unpacked<rivet::Bytes>& r) {
-              std::optional<std::string> failure;
-              rivet::Bytes validated;
-              if (!r.ok) {
-                failure = r.error;
-              } else {
-                validated = r.value;
-              }
-              show_restore_review(payload, validated, failure);
             },
             std::move(unpacked));
       });
