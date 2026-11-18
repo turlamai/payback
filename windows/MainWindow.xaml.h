@@ -29,12 +29,15 @@ struct MainWindow : MainWindowT<MainWindow> {
       Microsoft::UI::Xaml::RoutedEventArgs const&);
   void ApplyLanguage();
   void RenderDocumentFromCache();
-  void TintEarnedBack();
-  std::wstring joined_spent() const;
-  std::wstring joined_earned() const;
-  std::wstring joined_daily() const;
+  // 2026-11 redesign: tombstone visibility, undo, trash, backup (#57)
+  void UndoButton_Click(winrt::Windows::Foundation::IInspectable const& sender,
+                        Microsoft::UI::Xaml::RoutedEventArgs const& args);
+  winrt::fire_and_forget ShowTrashDialog();
+  void ExportBackupAsync();
+  void RestoreBackupAsync();
 
  private:
+  struct DeviceRow;
   winrt::fire_and_forget InitializeBackendAsync();
   void SetReadyUi();
   void SetErrorUi(std::string const& message);
@@ -45,13 +48,28 @@ struct MainWindow : MainWindowT<MainWindow> {
   void RenderDocument(std::vector<std::uint8_t> const& payload);
   void RenderDeviceList();
   void RenderDetail();
+  void RenderSummary();
   void UpdateToolbarEnabled();
   void SaveDeviceAsync(bool update, std::wstring id);
   void DeleteDeviceAsync(std::wstring id);
   void ShowDeleteConfirm(std::wstring const& id);
+  // trash lifecycle (docs/data-format.md "Trash"): tombstoned winners stay
+  // restorable; the toast's 撤销 reinstates the record via restore-device
+  void RestoreDeviceAsync(std::wstring id, bool follow_selection);
+  void LoadTrashAsync(bool show_after);
+  void ApplyTrashPayload(std::vector<std::uint8_t> const& payload);
+  void ShowUndoToast();
+  void DismissUndoToast();
+  void ShowRestoreReview(std::vector<std::uint8_t> const& payload,
+                         std::vector<std::uint8_t> const& validated,
+                         std::string const& failure);
+  void ConfirmRestoreAsync(std::vector<std::uint8_t> const& payload);
+  std::int64_t days_between(std::wstring const& from, std::wstring const& to) const;
+  std::int64_t remaining_goal_days(DeviceRow const& row) const;
+  std::wstring format_days(std::int64_t days) const;
 
-  // emotional layer (parity with the macOS host)
-  void ApplyQuip();
+  // emotional layer (parity with the macOS host); the rotating quips are
+  // retired with the 2026-11 redesign terminology contract
   void RunDailyDigest();
   void ShowCelebrations();
 
@@ -152,6 +170,7 @@ struct MainWindow : MainWindowT<MainWindow> {
     std::int64_t total_spent_minor = 0;
     double earned_total_minor = 0.0;
     double avg_cost_per_day_minor = 0.0;
+    double daily_cost_sum_minor = 0.0;
   };
   struct Document {
     std::wstring currency = L"CNY";
@@ -160,7 +179,9 @@ struct MainWindow : MainWindowT<MainWindow> {
     std::int64_t total_spent_minor = 0;
     double earned_total_minor = 0.0;
     double avg_cost_per_day_minor = 0.0;
+    double daily_cost_sum_minor = 0.0;
     int device_count = 0;
+    int trash_count = 0;
     // mixed portfolios: the combined money scalars above are null and the
     // tiles render these groups instead (issue #23)
     std::vector<CurrencyGroup> currency_groups;
@@ -168,10 +189,17 @@ struct MainWindow : MainWindowT<MainWindow> {
   };
 
   Document document_;
-  int sort_mode_ = 0;  // 0 added, 1 daily cost, 2 payback progress
-  int quip_day_ = 1;
+  // 0 = added order (the engine's merged order), 1 = newest purchase,
+  // 2 = daily cost, per-currency grouped, same-group descending
+  // (design/DESIGN.md sort contract)
+  int sort_mode_ = 0;
   bool celebration_dialog_open_ = false;
   bool auto_check_done_ = false;
+  // tombstoned records behind the settings trash row
+  std::vector<DeviceRow> trash_;
+  // the toast's undo target (empty = no undoable deletion)
+  std::wstring last_deleted_id_;
+  std::shared_ptr<Microsoft::UI::Xaml::DispatcherTimer> undo_timer_;
 
   // sidebar selection: which device drives the detail pane (empty = none
   // yet); a stale id falls back to the first device on every render

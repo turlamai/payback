@@ -37,6 +37,7 @@ struct MainWindow::SettingsPanel {
   Microsoft::UI::Xaml::Controls::TextBlock last_merge_text{nullptr};
   Microsoft::UI::Xaml::Controls::InfoBar ignored_bar{nullptr};
   Microsoft::UI::Xaml::Controls::ComboBox currency_box{nullptr};
+  Microsoft::UI::Xaml::Controls::TextBlock trash_count_text{nullptr};
 };
 
 namespace {
@@ -281,6 +282,73 @@ void MainWindow::OpenSettingsDialog() {
 
   main_section.Children().Append(enabled_section);
 
+  // ----- data & recovery (2026-11 redesign, #57) -----
+  auto data_separator = Microsoft::UI::Xaml::Controls::Border();
+  data_separator.Height(1);
+  data_separator.Background(theme_brush(contentRoot, L"PaybackLineBrush"));
+  data_separator.Margin({0, 4, 0, 4});
+  main_section.Children().Append(data_separator);
+
+  auto data_title = Microsoft::UI::Xaml::Controls::TextBlock();
+  data_title.Text(s.section_data_recovery());
+  data_title.FontSize(14);
+  data_title.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+  main_section.Children().Append(data_title);
+
+  auto backup_row = Microsoft::UI::Xaml::Controls::Grid();
+  backup_row.ColumnDefinitions().Append(star_column());
+  backup_row.ColumnDefinitions().Append(auto_column());
+  auto backup_caption = make_caption(s.backup_export_help());
+  Microsoft::UI::Xaml::Controls::Grid::SetColumn(backup_caption, 0);
+  backup_row.Children().Append(backup_caption);
+  auto backup_button = Microsoft::UI::Xaml::Controls::Button();
+  backup_button.Content(winrt::box_value(winrt::hstring(s.backup_export_button())));
+  Microsoft::UI::Xaml::Controls::Grid::SetColumn(backup_button, 1);
+  backup_button.VerticalAlignment(Microsoft::UI::Xaml::VerticalAlignment::Center);
+  backup_button.Click([weak](auto const&, auto const&) {
+    if (auto window = weak.get()) {
+      window->ExportBackupAsync();
+    }
+  });
+  backup_row.Children().Append(backup_button);
+  main_section.Children().Append(backup_row);
+
+  auto restore_row = Microsoft::UI::Xaml::Controls::Grid();
+  restore_row.ColumnDefinitions().Append(star_column());
+  restore_row.ColumnDefinitions().Append(auto_column());
+  auto restore_caption = make_caption(s.restore_row_help());
+  Microsoft::UI::Xaml::Controls::Grid::SetColumn(restore_caption, 0);
+  restore_row.Children().Append(restore_caption);
+  auto restore_button = Microsoft::UI::Xaml::Controls::Button();
+  restore_button.Content(winrt::box_value(winrt::hstring(s.choose_backup_button())));
+  Microsoft::UI::Xaml::Controls::Grid::SetColumn(restore_button, 1);
+  restore_button.VerticalAlignment(Microsoft::UI::Xaml::VerticalAlignment::Center);
+  restore_button.Click([weak](auto const&, auto const&) {
+    if (auto window = weak.get()) {
+      window->RestoreBackupAsync();
+    }
+  });
+  restore_row.Children().Append(restore_button);
+  main_section.Children().Append(restore_row);
+
+  auto trash_row = Microsoft::UI::Xaml::Controls::Grid();
+  trash_row.ColumnDefinitions().Append(star_column());
+  trash_row.ColumnDefinitions().Append(auto_column());
+  panel->trash_count_text = make_caption(L"");
+  Microsoft::UI::Xaml::Controls::Grid::SetColumn(panel->trash_count_text, 0);
+  trash_row.Children().Append(panel->trash_count_text);
+  auto trash_button = Microsoft::UI::Xaml::Controls::Button();
+  trash_button.Content(winrt::box_value(winrt::hstring(s.trash_view())));
+  Microsoft::UI::Xaml::Controls::Grid::SetColumn(trash_button, 1);
+  trash_button.VerticalAlignment(Microsoft::UI::Xaml::VerticalAlignment::Center);
+  trash_button.Click([weak](auto const&, auto const&) {
+    if (auto window = weak.get()) {
+      window->LoadTrashAsync(true);
+    }
+  });
+  trash_row.Children().Append(trash_button);
+  main_section.Children().Append(trash_row);
+
   // ----- currency -----
   auto separator = Microsoft::UI::Xaml::Controls::Border();
   separator.Height(1);
@@ -407,6 +475,12 @@ void MainWindow::RefreshSyncState(std::shared_ptr<SettingsPanel> const& panel) {
 
 void MainWindow::ApplySyncStateToPanel(
     std::shared_ptr<SettingsPanel> const& panel) {
+  Strings const& s_refresh = strings();
+  if (panel->trash_count_text) {
+    panel->trash_count_text.Text(
+        replace_all(s_refresh.trash_row_help(), L"{count}",
+                    std::to_wstring(document_.trash_count)));
+  }
   if (!panel || !panel->status_text) {
     return;
   }

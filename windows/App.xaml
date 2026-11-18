@@ -12,23 +12,31 @@
                      resolve while the window XAML is still parsing (a
                      same-element Grid.Resources definition is evaluated
                      before the resources exist and crashes the host). -->
+                <!-- Tokens are the 2026-11 redesign's paired values
+                     (design/prototype/shared.css): warm paper, terracotta
+                     accent pair, one green pair reserved for goal met. -->
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="PaybackPaperBrush" Color="#FAF7F2" />
                     <SolidColorBrush x:Key="PaybackCardBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="PaybackLineBrush" Color="#E8E2D9" />
-                    <SolidColorBrush x:Key="PaybackCardHoverBrush" Color="#F3EEE6" />
-                    <!-- earn #38964D per docs/design.md: green appears only
-                         for money already earned back -->
-                    <SolidColorBrush x:Key="PaybackEarnBrush" Color="#38964D" />
-                    <SolidColorBrush x:Key="PaybackEarnSoftBrush" Color="#2438964D" />
-                    <!-- brand accent #C15F3C per docs/design.md: value,
-                         progress, primary actions -->
-                    <SolidColorBrush x:Key="PaybackAccentBrush" Color="#C15F3C" />
-                    <SolidColorBrush x:Key="PaybackAccentSoftBrush" Color="#24C15F3C" />
-                    <!-- category badge tints: the mac host paints category
-                         hues at ~14% alpha straight over the paper, so the
-                         same translucent colors read on both themes; kept
-                         per-theme so hues can diverge later -->
+                    <SolidColorBrush x:Key="PaybackSidebarBrush" Color="#F2EDE6" />
+                    <SolidColorBrush x:Key="PaybackInkBrush" Color="#302D29" />
+                    <SolidColorBrush x:Key="PaybackMutedBrush" Color="#68635C" />
+                    <SolidColorBrush x:Key="PaybackLineBrush" Color="#E1DCD4" />
+                    <SolidColorBrush x:Key="PaybackSoftBrush" Color="#F3E5DC" />
+                    <SolidColorBrush x:Key="PaybackCardHoverBrush" Color="#F3E5DC" />
+                    <!-- goal-met green, used for nothing else -->
+                    <SolidColorBrush x:Key="PaybackEarnBrush" Color="#276D3B" />
+                    <SolidColorBrush x:Key="PaybackEarnSoftBrush" Color="#E7F0E7" />
+                    <!-- terracotta accent: value, progress, primary actions
+                         (light #A64A2B; closes #58's dark divergence) -->
+                    <SolidColorBrush x:Key="PaybackAccentBrush" Color="#A64A2B" />
+                    <SolidColorBrush x:Key="PaybackAccentHoverBrush" Color="#913E23" />
+                    <SolidColorBrush x:Key="PaybackAccentSoftBrush" Color="#F3E5DC" />
+                    <!-- destructive red only -->
+                    <SolidColorBrush x:Key="PaybackDangerBrush" Color="#B32C28" />
+                    <SolidColorBrush x:Key="PaybackDangerSoftBrush" Color="#FBE9E7" />
+                    <!-- legacy category badge tints (kept for the row tiles
+                         until the S4 icon pass; hues unchanged) -->
                     <SolidColorBrush x:Key="PaybackCatComputerBrush" Color="#23007AFF" />
                     <SolidColorBrush x:Key="PaybackCatPhoneBrush" Color="#2330B0C7" />
                     <SolidColorBrush x:Key="PaybackCatTabletBrush" Color="#235856D6" />
@@ -40,15 +48,21 @@
                     <SolidColorBrush x:Key="PaybackCatAccessoryBrush" Color="#2900C7BE" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="PaybackPaperBrush" Color="#1F1D1A" />
+                    <SolidColorBrush x:Key="PaybackPaperBrush" Color="#211F1C" />
                     <SolidColorBrush x:Key="PaybackCardBrush" Color="#2B2926" />
-                    <SolidColorBrush x:Key="PaybackLineBrush" Color="#3A3835" />
-                    <SolidColorBrush x:Key="PaybackCardHoverBrush" Color="#34322E" />
-                    <!-- brightened for contrast on the dark paper -->
-                    <SolidColorBrush x:Key="PaybackEarnBrush" Color="#57B26B" />
-                    <SolidColorBrush x:Key="PaybackEarnSoftBrush" Color="#2457B26B" />
-                    <SolidColorBrush x:Key="PaybackAccentBrush" Color="#DE8B6F" />
-                    <SolidColorBrush x:Key="PaybackAccentSoftBrush" Color="#24DE8B6F" />
+                    <SolidColorBrush x:Key="PaybackSidebarBrush" Color="#25221F" />
+                    <SolidColorBrush x:Key="PaybackInkBrush" Color="#EEE9E2" />
+                    <SolidColorBrush x:Key="PaybackMutedBrush" Color="#B9B1A7" />
+                    <SolidColorBrush x:Key="PaybackLineBrush" Color="#47413B" />
+                    <SolidColorBrush x:Key="PaybackSoftBrush" Color="#423127" />
+                    <SolidColorBrush x:Key="PaybackCardHoverBrush" Color="#423127" />
+                    <SolidColorBrush x:Key="PaybackEarnBrush" Color="#8BC79B" />
+                    <SolidColorBrush x:Key="PaybackEarnSoftBrush" Color="#293B2D" />
+                    <SolidColorBrush x:Key="PaybackAccentBrush" Color="#E5A17E" />
+                    <SolidColorBrush x:Key="PaybackAccentHoverBrush" Color="#EFB596" />
+                    <SolidColorBrush x:Key="PaybackAccentSoftBrush" Color="#423127" />
+                    <SolidColorBrush x:Key="PaybackDangerBrush" Color="#FF9B92" />
+                    <SolidColorBrush x:Key="PaybackDangerSoftBrush" Color="#452D29" />
                     <SolidColorBrush x:Key="PaybackCatComputerBrush" Color="#23007AFF" />
                     <SolidColorBrush x:Key="PaybackCatPhoneBrush" Color="#2330B0C7" />
                     <SolidColorBrush x:Key="PaybackCatTabletBrush" Color="#235856D6" />
