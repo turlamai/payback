@@ -6,12 +6,6 @@ import SwiftUI
 // Amounts and derived values come from the engine's computed block; the
 // host only formats and lays out.
 
-func paybackDetailProbe(_ tag: String) -> EmptyView {
-    if ProcessInfo.processInfo.environment["PAYBACK_E2E"] == "1" {
-        FileHandle.standardError.write(Data("payback: render detail.\(tag)\n".utf8))
-    }
-    return EmptyView()
-}
 
 struct DeviceDetail: View {
     let device: Device
@@ -20,7 +14,6 @@ struct DeviceDetail: View {
     var onDelete: () -> Void = {}
 
     var body: some View {
-        paybackDetailProbe("body")
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 deviceHead
@@ -44,7 +37,6 @@ struct DeviceDetail: View {
 
     @ViewBuilder
     private var deviceHead: some View {
-        paybackDetailProbe("head")
         HStack(alignment: .top, spacing: 24) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("\(CategoryLabel.label(for: device.category)) · "
@@ -90,7 +82,6 @@ struct DeviceDetail: View {
     /// (768–1100px contract in DESIGN.md).
     @ViewBuilder
     private var hero: some View {
-        paybackDetailProbe("hero")
         // horizontal at the window floor; the stacked variant only matters
         // below the 768px breakpoint, which the macOS window never reaches
         HStack(alignment: .top, spacing: 32) {
@@ -257,7 +248,6 @@ struct DeviceDetail: View {
 
     @ViewBuilder
     private var chartSection: some View {
-        paybackDetailProbe("curve")
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 Text(L10n.t(.chartTitle))
@@ -320,7 +310,6 @@ struct DeviceDetail: View {
 
     @ViewBuilder
     private var milestoneSection: some View {
-        paybackDetailProbe("milestones")
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L10n.t(.milestonesTitle))
@@ -407,7 +396,6 @@ struct DeviceDetail: View {
 
     @ViewBuilder
     private var methodSection: some View {
-        paybackDetailProbe("method")
         VStack(alignment: .leading, spacing: 16) {
             Text(L10n.t(.methodTitle))
                 .font(.system(size: 20, weight: .semibold))
