@@ -392,59 +392,106 @@ enum MilestoneDays {
 // MARK: - cost curve
 
 /// The prototype's curve mapping: cost(day) = price/day normalized against
-/// day one, soft fill, dashed midline and baseline, today dot.
+/// day one, soft fill, dashed midline and baseline, today dot. Shapes over
+/// a GeometryReader rather than a SwiftUI `Canvas`, matching the macOS
+/// leg — Canvas draws through Metal where a device is unavailable
+/// (issue #64).
 struct CompanionCostCurve: View {
     let priceMinor: Int64
     let daysHeld: Int
 
     var body: some View {
-        Canvas { context, size in
+        GeometryReader { geometry in
+            let size = geometry.size
             let insetX: CGFloat = 8
             let insetY: CGFloat = 8
             let span = size.height - insetY * 2 - 8
             let width = size.width - insetX * 2
 
-            var axis = Path()
-            axis.move(to: CGPoint(x: insetX, y: insetY + span * 0.5))
-            axis.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span * 0.5))
-            axis.move(to: CGPoint(x: insetX, y: insetY + span))
-            axis.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span))
-            context.stroke(axis,
-                           with: .color(PaybackTheme.line),
-                           style: StrokeStyle(lineWidth: 1, dash: [4, 6]))
+            CompanionCurveAxes(width: width, span: span)
+                .stroke(PaybackTheme.line,
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 6]))
+                .frame(width: size.width, height: size.height)
+            CompanionCurveFill(width: width, span: span, daysHeld: daysHeld)
+                .fill(PaybackTheme.soft)
+                .frame(width: size.width, height: size.height)
+            CompanionCurveLine(width: width, span: span, daysHeld: daysHeld)
+                .stroke(PaybackTheme.accent,
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round,
+                                           lineJoin: .round))
+                .frame(width: size.width, height: size.height)
 
-            let held = max(daysHeld, 1)
-            var line = Path()
-            var fill = Path()
-            let samples = 65
-            for index in 0..<samples {
-                let fraction = Double(index) / Double(samples - 1)
-                let day = 1.0 + fraction * Double(held - 1)
-                let x = insetX + CGFloat(fraction) * width
-                let y = insetY + CGFloat(1 - 1 / day) * span
-                let point = CGPoint(x: x, y: y)
-                if index == 0 {
-                    line.move(to: point)
-                    fill.move(to: point)
-                } else {
-                    line.addLine(to: point)
-                }
-            }
-            fill.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span))
-            fill.addLine(to: CGPoint(x: insetX, y: insetY + span))
-            fill.closeSubpath()
-            context.fill(fill, with: .color(PaybackTheme.soft))
-            context.stroke(line,
-                           with: .color(PaybackTheme.accent),
-                           style: StrokeStyle(lineWidth: 2.5, lineCap: .round,
-                                              lineJoin: .round))
-            let day = Double(held)
-            let dot = CGPoint(x: size.width - insetX,
-                              y: insetY + CGFloat(1 - 1 / day) * span)
-            var circle = Path()
-            circle.addEllipse(in: CGRect(x: dot.x - 4, y: dot.y - 4,
-                                         width: 8, height: 8))
-            context.fill(circle, with: .color(PaybackTheme.accent))
+            let held = Double(max(daysHeld, 1))
+            Circle()
+                .fill(PaybackTheme.accent)
+                .frame(width: 8, height: 8)
+                .position(x: insetX + width,
+                          y: insetY + CGFloat(1 - 1 / held) * span)
         }
+    }
+}
+
+private func companionCurveLinePath(width: CGFloat, span: CGFloat,
+                                    daysHeld: Int) -> Path {
+    let insetX: CGFloat = 8
+    let insetY: CGFloat = 8
+    let held = max(daysHeld, 1)
+    var line = Path()
+    let samples = 65
+    for index in 0..<samples {
+        let fraction = Double(index) / Double(samples - 1)
+        let day = 1.0 + fraction * Double(held - 1)
+        let x = insetX + CGFloat(fraction) * width
+        let y = insetY + CGFloat(1 - 1 / day) * span
+        let point = CGPoint(x: x, y: y)
+        if index == 0 {
+            line.move(to: point)
+        } else {
+            line.addLine(to: point)
+        }
+    }
+    return line
+}
+
+private struct CompanionCurveAxes: Shape {
+    let width: CGFloat
+    let span: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let insetX: CGFloat = 8
+        let insetY: CGFloat = 8
+        var axis = Path()
+        axis.move(to: CGPoint(x: insetX, y: insetY + span * 0.5))
+        axis.addLine(to: CGPoint(x: width + insetX, y: insetY + span * 0.5))
+        axis.move(to: CGPoint(x: insetX, y: insetY + span))
+        axis.addLine(to: CGPoint(x: width + insetX, y: insetY + span))
+        return axis
+    }
+}
+
+private struct CompanionCurveLine: Shape {
+    let width: CGFloat
+    let span: CGFloat
+    let daysHeld: Int
+
+    func path(in rect: CGRect) -> Path {
+        companionCurveLinePath(width: width, span: span, daysHeld: daysHeld)
+    }
+}
+
+private struct CompanionCurveFill: Shape {
+    let width: CGFloat
+    let span: CGFloat
+    let daysHeld: Int
+
+    func path(in rect: CGRect) -> Path {
+        let insetX: CGFloat = 8
+        let insetY: CGFloat = 8
+        var fill = companionCurveLinePath(width: width, span: span,
+                                          daysHeld: daysHeld)
+        fill.addLine(to: CGPoint(x: width + insetX, y: insetY + span))
+        fill.addLine(to: CGPoint(x: insetX, y: insetY + span))
+        fill.closeSubpath()
+        return fill
     }
 }

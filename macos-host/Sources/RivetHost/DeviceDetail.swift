@@ -552,71 +552,116 @@ struct MilestoneRow: View {
 /// The daily-cost curve: cost(day) = price / day, normalized against day
 /// one (= the full price), exactly the prototype's mapping
 /// y = top + (1 − 1/day) × span. It only ever falls — that is the product.
+///
+/// Rendered as Shapes over a GeometryReader, deliberately not a SwiftUI
+/// `Canvas`: Canvas draws through Metal on macOS, and the GPU-less Intel
+/// CI runner aborts inside MTLLoader when a device is requested
+/// (issue #64). Shapes rasterize on the Core Graphics path the
+/// pre-redesign host used and that runner runs fine.
 struct CostCurve: View {
     let priceMinor: Int64
     let daysHeld: Int
 
     var body: some View {
-        Canvas { context, size in
+        GeometryReader { geometry in
+            let size = geometry.size
             let insetX: CGFloat = 8
             let insetY: CGFloat = 8
             let span = size.height - insetY * 2 - 10
             let width = size.width - insetX * 2
 
             // dashed axes: midline + baseline, like the prototype
-            var axis = Path()
-            axis.move(to: CGPoint(x: insetX, y: insetY + span * 0.5))
-            axis.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span * 0.5))
-            axis.move(to: CGPoint(x: insetX, y: insetY + span))
-            axis.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span))
-            context.stroke(axis,
-                           with: .color(PaybackTheme.line),
-                           style: StrokeStyle(lineWidth: 1, dash: [4, 6]))
+            CostCurveAxes(width: width, span: span)
+                .stroke(PaybackTheme.line,
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 6]))
+                .frame(width: size.width, height: size.height)
+                .offset(x: 0, y: 0)
 
-            // the curve itself
-            let held = max(daysHeld, 1)
-            var line = Path()
-            var fill = Path()
-            let samples = 65
-            for index in 0..<samples {
-                let fraction = Double(index) / Double(samples - 1)
-                let day = 1.0 + fraction * Double(held - 1)
-                let x = insetX + CGFloat(fraction) * width
-                let y = insetY + CGFloat(1 - 1 / day) * span
-                let point = CGPoint(x: x, y: y)
-                if index == 0 {
-                    line.move(to: point)
-                    fill.move(to: point)
-                } else {
-                    line.addLine(to: point)
-                }
-            }
-            fill.addLine(to: CGPoint(x: size.width - insetX, y: insetY + span))
-            fill.addLine(to: CGPoint(x: insetX, y: insetY + span))
-            fill.closeSubpath()
-            context.fill(fill, with: .color(PaybackTheme.soft))
-            context.stroke(line,
-                           with: .color(PaybackTheme.accent),
-                           style: StrokeStyle(lineWidth: 3, lineCap: .round,
-                                              lineJoin: .round))
+            // the curve's area fill and its line
+            CostCurveFill(width: width, span: span, daysHeld: daysHeld)
+                .fill(PaybackTheme.soft)
+                .frame(width: size.width, height: size.height)
+            CostCurveLine(width: width, span: span, daysHeld: daysHeld)
+                .stroke(PaybackTheme.accent,
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round,
+                                           lineJoin: .round))
+                .frame(width: size.width, height: size.height)
 
             // the "today" dot at the curve's end
-            let todayFraction = held > 1 ? 1.0 : 0.0
-            let day = Double(held)
-            let dot = CGPoint(x: insetX + CGFloat(todayFraction) * width,
-                              y: insetY + CGFloat(1 - 1 / day) * span)
-            context.fill(Path.circleIn(dot, radius: 4),
-                         with: .color(PaybackTheme.accent))
+            let held = Double(max(daysHeld, 1))
+            Circle()
+                .fill(PaybackTheme.accent)
+                .frame(width: 8, height: 8)
+                .position(x: insetX + width,
+                          y: insetY + CGFloat(1 - 1 / held) * span)
         }
         .frame(height: 180)
     }
 }
 
-private extension Path {
-    static func circleIn(_ point: CGPoint, radius: CGFloat) -> Path {
-        var path = Path()
-        path.addEllipse(in: CGRect(x: point.x - radius, y: point.y - radius,
-                                   width: radius * 2, height: radius * 2))
-        return path
+/// Shared curve geometry: the falling daily-cost polyline from day one
+/// (= the whole price) toward today.
+private func costCurveLinePath(width: CGFloat, span: CGFloat,
+                               daysHeld: Int) -> Path {
+    let insetX: CGFloat = 8
+    let insetY: CGFloat = 8
+    let held = max(daysHeld, 1)
+    var line = Path()
+    let samples = 65
+    for index in 0..<samples {
+        let fraction = Double(index) / Double(samples - 1)
+        let day = 1.0 + fraction * Double(held - 1)
+        let x = insetX + CGFloat(fraction) * width
+        let y = insetY + CGFloat(1 - 1 / day) * span
+        let point = CGPoint(x: x, y: y)
+        if index == 0 {
+            line.move(to: point)
+        } else {
+            line.addLine(to: point)
+        }
+    }
+    return line
+}
+
+private struct CostCurveAxes: Shape {
+    let width: CGFloat
+    let span: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let insetX: CGFloat = 8
+        let insetY: CGFloat = 8
+        var axis = Path()
+        axis.move(to: CGPoint(x: insetX, y: insetY + span * 0.5))
+        axis.addLine(to: CGPoint(x: width + insetX, y: insetY + span * 0.5))
+        axis.move(to: CGPoint(x: insetX, y: insetY + span))
+        axis.addLine(to: CGPoint(x: width + insetX, y: insetY + span))
+        return axis
+    }
+}
+
+private struct CostCurveLine: Shape {
+    let width: CGFloat
+    let span: CGFloat
+    let daysHeld: Int
+
+    func path(in rect: CGRect) -> Path {
+        costCurveLinePath(width: width, span: span, daysHeld: daysHeld)
+    }
+}
+
+private struct CostCurveFill: Shape {
+    let width: CGFloat
+    let span: CGFloat
+    let daysHeld: Int
+
+    func path(in rect: CGRect) -> Path {
+        let insetX: CGFloat = 8
+        let insetY: CGFloat = 8
+        var fill = costCurveLinePath(width: width, span: span,
+                                     daysHeld: daysHeld)
+        fill.addLine(to: CGPoint(x: width + insetX, y: insetY + span))
+        fill.addLine(to: CGPoint(x: insetX, y: insetY + span))
+        fill.closeSubpath()
+        return fill
     }
 }

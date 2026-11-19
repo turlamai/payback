@@ -233,3 +233,65 @@ public extension RivetDeviceRouter {
         }
     }
 }
+
+#if canImport(RivetDeviceAppleTransport)
+import RivetDeviceAppleTransport
+
+// Typed network-channel surface for the same `device-rpcs` allowlist as
+// RivetDeviceClient above (issue #489): each allowlisted request becomes
+// call("<name>", [RivetValue…]) with positional typed arguments. Bytes
+// results are returned raw — decode them exactly like the desktop host
+// does. The gateway scope check stays authoritative; this surface is a
+// usability aid, not an authorization decision.
+private func rivetRVT1Data(_ value: RivetValue) throws -> Data {
+    guard case .bytes(let data) = value else {
+        throw RivetGeneratedError.typeMismatch("bytes")
+    }
+    return data
+}
+
+private func rivetRVT1String(_ value: RivetValue) throws -> String {
+    guard case .string(let value) = value else {
+        throw RivetGeneratedError.typeMismatch("string")
+    }
+    return value
+}
+
+private func rivetRVT1Int64(_ value: RivetValue) throws -> Int64 {
+    guard case .int64(let value) = value else {
+        throw RivetGeneratedError.typeMismatch("int64")
+    }
+    return value
+}
+
+private func rivetRVT1Bool(_ value: RivetValue) throws -> Bool {
+    guard case .bool(let value) = value else {
+        throw RivetGeneratedError.typeMismatch("bool")
+    }
+    return value
+}
+
+public extension RivetDeviceAppleRVT1Client {
+    func load_all() async throws -> Data {
+        try rivetRVT1Data(try await call("load-all"))
+    }
+    func trash_list() async throws -> Data {
+        try rivetRVT1Data(try await call("trash-list"))
+    }
+    func add_device(payload: Data) async throws -> Data {
+        try rivetRVT1Data(try await call("add-device", arguments: [.bytes(payload)]))
+    }
+    func update_device(payload: Data) async throws -> Data {
+        try rivetRVT1Data(try await call("update-device", arguments: [.bytes(payload)]))
+    }
+    func delete_device(id: String) async throws {
+        _ = try await call("delete-device", arguments: [.string(id)])
+    }
+    func restore_device(id: String) async throws -> Data {
+        try rivetRVT1Data(try await call("restore-device", arguments: [.string(id)]))
+    }
+    func sync_state() async throws -> Data {
+        try rivetRVT1Data(try await call("sync-state"))
+    }
+}
+#endif
