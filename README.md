@@ -1,7 +1,5 @@
 # Payback
 
-**Product:** [Website](https://payback.jrtx.site/) · **Support:** [Issues & feedback](https://github.com/turlamai/payback/issues) · [Development policy](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.md)
-
 Watch every device pay itself back, one day at a time. Record what you paid, and Payback counts the daily cost down — set what a day with the device is worth to you, and watch the payback ring fill up.
 
 [![release](https://img.shields.io/github/v/release/turlamai/payback)](https://github.com/turlamai/payback/releases/latest) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey) [![CI](https://github.com/turlamai/payback/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/payback/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
