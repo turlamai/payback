@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 env:
-  RIVET_PIN: v0.17.0
+  RIVET_PIN: 179319936c6a22b2fa676c0fd557bcdb05ee5205
 concurrency:
   # Keep each main acceptance gate; GitHub silently replaces older pending
   # runs that share a group. Only superseded revisions of one PR cancel.
