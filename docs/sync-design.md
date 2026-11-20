@@ -1,6 +1,6 @@
 # 多端同步设计（数据格式 v2）
 
-> 状态：**M1 已实施**（共享层 + macOS 宿主 1.11.0；Windows/Linux 宿主设置段随 #7/#8 落地）。
+> 状态：**M1 已实施**（共享层 + macOS 宿主 1.11.0；Windows 宿主设置段随 #7 落地；Linux 腿已退役 #66，iOS 伴随端随 #63）。
 > 进度追踪 [#9](https://github.com/turlamai/payback/issues/9)。存储布局的权威描述
 > 在 [`data-format.md`](data-format.md)；本文件保留「为什么」与不变式——改 `app/sync.rkt`、
 > 做任何同步相关 UI 之前必读。
@@ -119,8 +119,8 @@ payback.json               # v1 遗留：只读、一次性迁移后不再写
 ## 触发与监听
 
 - 启动合并一次（几个小 JSON，毫秒级）。
-- 桌面端监听数据目录：FSEvents（macOS）/ ReadDirectoryChangesW（Windows）/ inotify
-  （Linux），**30 秒轮询兜底**——网盘挂载点的变更通知不可靠。
+- 桌面端监听数据目录：FSEvents（macOS）/ ReadDirectoryChangesW（Windows），
+  **30 秒轮询兜底**——网盘挂载点的变更通知不可靠。
 - 外部变更防抖 1–2 秒后重合并，结果经 `load-all` 让宿主刷新。
 - 本地写沿用现有原子替换 + semaphore 纪律；只写自己的分片。
 
@@ -128,7 +128,7 @@ payback.json               # v1 遗留：只读、一次性迁移后不再写
 
 | 平台 | 同步位置 | 用户动作 |
 |---|---|---|
-| macOS / Windows / Linux | 任意同步文件夹（iCloud Drive / Dropbox / OneDrive / 坚果云 / Syncthing / Resilio） | 每台一次：自动探测常见位置并提示「检测到 X，使用？」，探测不到才开 folder picker；默认仍本机不同步 |
+| macOS / Windows | 任意同步文件夹（iCloud Drive / Dropbox / OneDrive / 坚果云 / Syncthing / Resilio） | 每台一次：自动探测常见位置并提示「检测到 X，使用？」，探测不到才开 folder picker；默认仍本机不同步 |
 | iOS / iPadOS（v2.0） | iCloud Drive 容器（Apple 运营，零服务器） | 纯开关，路径固定无需填 |
 | watchOS（v2.0） | 不参与文件同步 | iPhone 的只读伴随端，WatchConnectivity 推合并视图 |
 | Android（v2.x） | WebDAV / S3 适配器 | 每端填一次地址 + 凭据 |
@@ -167,5 +167,5 @@ WebDAV / S3 是唯一真要填的；后续支持从已配置端导出同步配�
 ## 跨设备归属
 
 `app/store.rkt`、新 `app/sync.rkt`、`app/wire.rkt`、`docs/data-format.md` 是共享层——改前按
-跨设备协议在 #9 声明单写窗口；三宿主设置段 UI 各腿各自机器写（mac 本机 / Windows 腿与 #7
-同批 / Linux 腿与 #8 同批）。
+跨设备协议在 #9 声明单写窗口；各宿主设置段 UI 各腿各自机器写（mac 本机 / Windows 腿与 #7
+同批；Linux 腿已随 #66 退役，iOS 伴随端随 #63）。

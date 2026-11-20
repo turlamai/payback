@@ -2,13 +2,13 @@
 
 Watch every device pay itself back, one day at a time. Record what you paid, and Payback counts the daily cost down — set what a day with the device is worth to you, and watch the payback ring fill up.
 
-[![release](https://img.shields.io/github/v/release/turlamai/payback)](https://github.com/turlamai/payback/releases/latest) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey) [![CI](https://github.com/turlamai/payback/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/payback/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![release](https://img.shields.io/github/v/release/turlamai/payback)](https://github.com/turlamai/payback/releases/latest) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey) [![CI](https://github.com/turlamai/payback/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/payback/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **English** · [中文](README.zh-CN.md)
 
 ## Start here
 
-Payback is designated free on every delivered platform. No Pro licences are offered for purchase, and the retired device gate leaves no paywall. Desktop previews for macOS, Windows and Linux; mobile is not a current delivery.
+Payback is designated free on every delivered platform until its own PRICING decision lands. No Pro licences are offered for purchase, and the retired device gate leaves no paywall. Desktop builds for macOS and Windows; an iOS/iPadOS companion is in development ([#63](https://github.com/turlamai/payback/issues/63)) and not yet delivered. The Linux desktop leg was retired on 2026-11-20 ([#66](https://github.com/turlamai/payback/issues/66)).
 
 [Installation, first use, privacy, backup and recovery](docs/USER-GUIDE.md) · [简体中文](docs/USER-GUIDE.zh-CN.md)
 
@@ -20,14 +20,18 @@ Download from [Releases](https://github.com/turlamai/payback/releases/latest):
 |---|---|---|
 | macOS 14+ (Apple Silicon & Intel) | `payback-<version>-macos-<arch>.dmg` — `arm64` / `x64` — plus a portable `.zip` per arch | in-app (signed manifest), or reinstall the newer DMG |
 | Windows 10+ x64 | `payback-<version>-windows-x64.msi` installer, or `payback-<version>-windows-x64.zip` portable | in-app (signed manifest, passive `msiexec` handoff), or re-run the newer MSI |
-| Linux x64 / arm64 | `payback-<version>-linux-<arch>.tar.gz` / `payback-<version>-linux-<arch>.zip` portable, `payback-<version>-linux-<distro-arch>.deb`, `payback-<version>-linux-<toolchain-arch>.rpm`, `payback-<version>-linux-<toolchain-arch>.AppImage` (bundled GTK4), or a `payback-<version>-linux-<arch>.flatpak` bundle (app id `site.jrtx.payback`; install with `flatpak --user install`) | tarball: in-app download + verify, extract the new tar.gz over the app directory; deb / rpm / AppImage: upgrade through the package manager (or replace the AppImage file); Flatpak bundle: install the newer bundle the same way — the updater is a no-op for these installs ([docs/update.md](docs/update.md)) |
+
+Linux desktop builds (tar.gz / deb / rpm / AppImage / Flatpak) were retired on
+2026-11-20 (#66); existing Linux installs keep their last version. The Racket
+engine and its contract/bridge acceptance suites remain platform-neutral and
+keep running on Linux machines in CI.
 
 Every release carries a `SHA256SUMS` manifest and Sigstore build provenance
 (`gh attestation verify <file> -R turlamai/payback`).
 
-macOS builds carry an ad-hoc signature only. On first launch, right-click
-the app and choose Open (or run `xattr -cr /Applications/Payback.app`) to
-clear the Gatekeeper prompt.
+macOS release builds are Developer ID-signed and Apple-notarized (the release
+pipeline fails closed without signing credentials). Windows installers carry
+rivet's development signing; no Authenticode identity is claimed yet.
 
 ## The idea
 
@@ -78,7 +82,7 @@ contract): atomic writes, human-readable, easy to back up.
 ## Building
 
 ```bash
-raco test tests/          # 42 test cases + a full-protocol RPC run, 200+ assertions
+raco test tests/          # 43 test cases + a full-protocol RPC run, 200+ assertions
 raco rivet build          # backend + current platform native host
 raco rivet package        # distributable .app / Windows directory, verified
 node scripts/gen-strings.js --check   # UI strings parity (zh/en)
@@ -86,7 +90,8 @@ node scripts/gen-strings.js --check   # UI strings parity (zh/en)
 
 Windows host code is source-complete and builds on Windows with the usual
 WinUI 3 toolchain (`raco rivet build` on Windows); CI exercises the Racket
-backend on all three OSes.
+backend on macOS, Windows and Linux alike — the engine layer stays
+platform-neutral even though the product ships macOS + Windows only.
 
 ## How it works
 
@@ -113,6 +118,7 @@ payback/
 ├── tests/                raco test suite (domain, store, wire, updater, RPC)
 ├── macos-host/           SwiftUI host (Swift Package)
 ├── windows/              WinUI 3 host (C++/WinRT)
+├── ios/                  SwiftUI companion PaybackCompanion (in development, #63)
 ├── shared/strings/       zh/en UI strings — single source, generated tables
 ├── scripts/              gen-strings.js · gen-update-keys.sh · check-release-version.sh
 ├── docs/                 data-format.md · update.md
@@ -131,7 +137,15 @@ payback/
 
 ## Product development
 
-Payback is focused on reliable data entry, backup, native interaction and updates. No purchase, commercial entitlement or device-count paywall is planned. Some older builds had legacy device limits; verify migration and removal before treating a particular binary as unrestricted.
+Payback is the family's full-platform payment-flow validation product
+(macOS / Windows / iOS / iPadOS) per the
+[portfolio decision](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.md)
+(2026-11-19). Its own PRICING decision must land before any purchase flow
+ships; until then every delivered edition remains free and unrestricted, and
+no purchase, commercial entitlement or device-count paywall is implemented.
+Current focus stays on reliable data entry, backup, native interaction and
+updates. Some older builds had legacy device limits; verify migration and
+removal before treating a particular binary as unrestricted.
 
 ## License
 

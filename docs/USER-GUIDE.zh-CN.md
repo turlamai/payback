@@ -10,9 +10,9 @@ Payback 的定位是已交付平台全部免费。旧设备数限制已退役；
 
 ## 平台与安装
 
-提供 macOS、Windows、Linux 桌面预览版；移动端尚未交付。
+提供 macOS 与 Windows 桌面版；iOS/iPadOS 伴随端开发中（[#63](https://github.com/turlamai/payback/issues/63)），尚未交付。Linux 桌面腿已于 2026-11-20 退役（[#66](https://github.com/turlamai/payback/issues/66)）。
 
-从[官方 Releases](https://github.com/turlamai/payback/releases)选择明确标注系统和架构的附件，阅读该版本说明并核对附带校验文件。未列出的附件或平台不视为已交付。预览构建可能没有系统发行者签名或公证；不要为安装而关闭系统安全保护。
+从[官方 Releases](https://github.com/turlamai/payback/releases)选择明确标注系统和架构的附件，阅读该版本说明并核对附带校验文件。未列出的附件或平台不视为已交付。macOS 官方发行构建为 Developer ID 签名并经 Apple 公证；Windows 安装器为 rivet 开发签名。不要为安装而关闭系统安全保护。
 
 ## 第一次使用
 
@@ -30,7 +30,7 @@ Payback 的定位是已交付平台全部免费。旧设备数限制已退役；
 
 ## 已知限制
 
-跨币种汇总目前不可靠（#23），请保持同一币种并核对单设备金额。GTK 日期输入存在已知 ISO 日期缺陷（#22）。
+跨币种汇总目前不可靠（#23），请保持同一币种并核对单设备金额。GTK 日期输入缺陷（#22）已随 Linux 腿退役（#66）。
 
 ## 更新与卸载
 
