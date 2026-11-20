@@ -210,135 +210,9 @@ jobs:
             payback-*-windows-x64.zip.sha256
           if-no-files-found: error
 
-  linux:
-    name: Linux package (${{ matrix.arch }})
-    needs: validate
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x64
-            runner: ubuntu-latest
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-    env:
-      # appimagetool runs in extract-and-run mode on the runner (no FUSE);
-      # rivet sets this itself before invoking the tool — declared here so
-      # the build machine contract is visible in the workflow (taskly form).
-      APPIMAGE_EXTRACT_AND_RUN: '1'
-    steps:
-      - uses: actions/checkout@v7
-      - name: Set up embeddable Racket CS
-        # Literal pin: `uses:` does not expand env, so this cannot read
-        # RIVET_PIN — bump it in tandem with RIVET_PIN (top of file).
-        uses: turlamai/rivet/.github/actions/setup-embed-racket@v0.17.0
-      - name: Install Rivet (catalog)
-        run: raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#${{ env.RIVET_PIN }}'
-      - name: Install GTK toolchain + packaging tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build pkg-config file \
-            desktop-file-utils rpm \
-            libgtk-4-dev libjson-glib-dev libsecret-1-dev libglib2.0-dev
-      - name: Version preflight (VERSION == rivet.rktd == updater)
-        run: bash scripts/check-release-version.sh "${{ github.ref_name }}"
-      - name: Package (rivet release, development signing)
-        env:
-          RIVET_UPDATE_BASE_URL: https://github.com/turlamai/payback/releases/download/${{ github.ref_name }}
-          RIVET_UPDATE_KEY_ID: payback-2026-09
-          RIVET_UPDATE_PRIVATE_KEY_B64: ${{ secrets.UPDATE_ED25519_PRIVATE_KEY_B64 }}
-        run: |
-          KEY_DER="$(mktemp -d)/update-ed25519-private.der"
-          printf '%s' "$RIVET_UPDATE_PRIVATE_KEY_B64" | base64 -d > "$KEY_DER"
-          export RIVET_UPDATE_PRIVATE_KEY="$KEY_DER"
-          raco rivet release --development
-          rm -f "$KEY_DER"
-        shell: bash
-      - name: Flatpak bundle
-        run: |
-          set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-          ARCH="${{ matrix.arch }}"
-          case "$ARCH" in x64) FPARCH=x86_64 ;; arm64) FPARCH=aarch64 ;; esac
-          sudo apt-get install --yes flatpak flatpak-builder
-          # User-level everything: runner accounts install runtimes and
-          # build without root. GNOME 50 is the oldest supported platform
-          # runtime (48 went EOL 2026-03-24); its glibc 2.42 covers the
-          # ubuntu-24.04-built payload.
-          flatpak --user remote-add --if-not-exists flathub \
-            https://flathub.org/repo/flathub.flatpakrepo
-          flatpak --user install -y --noninteractive flathub \
-            "org.gnome.Platform/${FPARCH}/50" "org.gnome.Sdk/${FPARCH}/50"
-          # The manifest template carries version/arch/sha placeholders so
-          # the archive source's checksum is exact per release.
-          cp "dist/payback-${VERSION}-linux-${ARCH}.tar.gz" .
-          SHA="$(sha256sum "payback-${VERSION}-linux-${ARCH}.tar.gz" | cut -d' ' -f1)"
-          sed -e "s/__VERSION__/${VERSION}/" -e "s/__ARCH__/${ARCH}/" \
-              -e "s/__SHA256__/${SHA}/" \
-              flatpak/site.jrtx.payback.yml > site.jrtx.payback.gen.yml
-          # --disable-rofiles-fuse: runners have no /dev/fuse.
-          flatpak-builder --user --force-clean --disable-rofiles-fuse \
-            --repo=flatpak-repo flatpak-build site.jrtx.payback.gen.yml
-          flatpak build-bundle flatpak-repo \
-            "payback-${VERSION}-linux-${ARCH}.flatpak" site.jrtx.payback stable
-          rm -rf flatpak-build flatpak-repo "payback-${VERSION}-linux-${ARCH}.tar.gz"
-          mv "payback-${VERSION}-linux-${ARCH}.flatpak" dist/
-          test -s "dist/payback-${VERSION}-linux-${ARCH}.flatpak"
-      - name: Collect artifacts + sha256 sidecars
-        run: |
-          set -euo pipefail
-          # payback signs one merged feed in the publish job; the per-platform
-          # channel manifest rivet emits here is not shipped. SBOM/notices are
-          # a taskly release artifact, not a payback one — the root overview
-          # lives in THIRD_PARTY_NOTICES.md at the repository root.
-          rm -f dist/update-*.json dist/sbom.cdx.json dist/THIRD_PARTY_NOTICES.txt
-          # Family naming audit: rivet emits these exact names — the tar.gz
-          # carries the update feed's x64/arm64 arch, deb the Debian arch,
-          # rpm the toolchain arch plus the build number, AppImage the
-          # toolchain arch.
-          VERSION="${GITHUB_REF_NAME#v}"
-          ARCH="${{ matrix.arch }}"
-          case "$ARCH" in
-            x64)   DEB_ARCH=amd64;   RPM_ARCH=x86_64;  AAI_ARCH=x86_64 ;;
-            arm64) DEB_ARCH=arm64;   RPM_ARCH=aarch64; AAI_ARCH=aarch64 ;;
-            *) echo "unknown matrix arch: $ARCH" >&2; exit 1 ;;
-          esac
-          test -f "dist/payback-${VERSION}-linux-${ARCH}.tar.gz"
-          test -f "dist/payback-${VERSION}-linux-${DEB_ARCH}.deb"
-          # the rpm name carries the rivet.rktd build number — assert by
-          # glob so a build bump needs no workflow edit
-          ls dist/payback-${VERSION}-*-linux-${RPM_ARCH}.rpm >/dev/null
-          test -f "dist/payback-${VERSION}-linux-${AAI_ARCH}.AppImage"
-          test -f "dist/payback-${VERSION}-linux-${ARCH}.zip"
-          # sha256 sidecar for every shipped artifact (rivet already writes
-          # one beside the portable zip). dist also holds the staged
-          # payback-linux-<arch>/ package directory — files only.
-          cd dist
-          for f in payback-*; do
-            case "$f" in
-              *.sha256) ;;
-              *) [ -f "$f" ] || continue
-                 [ -f "$f.sha256" ] || sha256sum "$f" > "$f.sha256" ;;
-            esac
-          done
-        shell: bash
-      - uses: actions/upload-artifact@v7
-        with:
-          name: linux-${{ matrix.arch }}
-          path: |
-            dist/payback-*.tar.gz
-            dist/payback-*.deb
-            dist/payback-*.rpm
-            dist/payback-*.AppImage
-            dist/payback-*.flatpak
-            dist/payback-*.zip
-            dist/payback-*.sha256
-          if-no-files-found: error
-
   release:
     name: Sign manifest + publish
-    needs: [macos, windows, linux]
+    needs: [macos, windows]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -379,19 +253,10 @@ jobs:
           mkdir -p public
           for suffix in \
             macos-arm64.dmg macos-arm64.zip macos-x64.dmg macos-x64.zip \
-            windows-x64.msi windows-x64.zip \
-            linux-arm64.tar.gz linux-arm64.zip linux-x64.tar.gz linux-x64.zip \
-            linux-amd64.deb linux-arm64.deb \
-            linux-aarch64.AppImage linux-x86_64.AppImage \
-            linux-x64.flatpak linux-arm64.flatpak; do
+            windows-x64.msi windows-x64.zip; do
             name="payback-$VERSION-$suffix"
             test -s "dist/$name" || { echo "::error::Missing or empty $name"; exit 1; }
             cp "dist/$name" "public/$name"
-          done
-          for arch in aarch64 x86_64; do
-            rpm="$(find dist -maxdepth 1 -type f -name "payback-$VERSION-*-linux-$arch.rpm" -print -quit)"
-            test -s "$rpm" || { echo "::error::Missing $arch RPM"; exit 1; }
-            cp "$rpm" public/
           done
           cp dist/update-manifest.json dist/update-stable.json public/
           test -s public/update-manifest.json && test -s public/update-stable.json
@@ -399,7 +264,7 @@ jobs:
           cd public
           shasum -a 256 payback-* | LC_ALL=C sort -k2 > SHA256SUMS
           shasum -a 256 --check SHA256SUMS
-          test "$(grep -c '^' SHA256SUMS)" -eq 18
+          test "$(grep -c '^' SHA256SUMS)" -eq 6
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

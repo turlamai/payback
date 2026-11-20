@@ -52,8 +52,5 @@ check_generated_version \
 check_generated_version \
   "windows/GeneratedBackend.hpp" \
   'kVersion\[\] = "[^"]+"'
-check_generated_version \
-  "linux/GeneratedBackend.hpp" \
-  'kVersion\[\] = "[^"]+"'
 
 echo "release preflight: version $VERSION is aligned (VERSION == rivet.rktd == updater == generated clients)"
