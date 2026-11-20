@@ -16,7 +16,7 @@ concurrency:
 # Single source of truth for the rivet pin; every install step below
 # references this so a bump is one edit, not a grep-replace across jobs.
 env:
-  RIVET_PIN: v0.17.0
+  RIVET_PIN: 179319936c6a22b2fa676c0fd557bcdb05ee5205
 jobs:
   validate:
     name: Validate release tag
