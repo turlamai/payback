@@ -61,23 +61,21 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with: {name: 'payback-acceptance-macos-${{ matrix.arch }}', path: .rivet/acceptance/, if-no-files-found: warn}
-  linux:
-    name: Linux packaged GTK4 acceptance
+  engine-linux:
+    # Issue #66: the product ships macOS + Windows (iOS companion per #63),
+    # but the engine-layer acceptance suites (contract, bridge) stay
+    # platform-neutral and must keep passing on Linux machines. On linux the
+    # narrowed manifest applies exactly core-contract + embedded-wire — no
+    # native build/package/UI leg exists.
+    name: Linux engine acceptance (contract + bridge)
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: Bogdanp/setup-racket@v1.16
         with: {version: '9.3', architecture: x64, distribution: full, variant: CS}
-      # --no-install-recommends: the recommends closure drags in speech
-      # models (pocketsphinx, 27 MB) that once starved this job's whole
-      # 50-minute budget on a slow mirror; retries ride out transient
-      # mirror resets
-      - run: sudo apt-get update && sudo apt-get install -y -o Acquire::Retries=5 --no-install-recommends build-essential cmake ninja-build pkg-config libgtk-4-dev libjson-glib-dev libglib2.0-dev libsecret-1-dev liblz4-dev zlib1g-dev libncurses-dev libx11-dev libxtst-dev weston at-spi2-core python3-pyatspi
       - run: raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#${RIVET_PIN}"
-      - run: echo "FULL_RACKET_BIN=$(dirname "$(command -v raco)")" >> "$GITHUB_ENV"
-      - uses: turlamai/rivet/.github/actions/setup-embed-racket@v0.17.0
-      - run: PATH="$FULL_RACKET_BIN:$PATH" dbus-run-session -- raco rivet acceptance --json
+      - run: raco rivet acceptance --json
       - uses: actions/upload-artifact@v7
         if: always()
-        with: {name: payback-acceptance-linux, path: .rivet/acceptance/, if-no-files-found: warn}
+        with: {name: payback-acceptance-engine-linux, path: .rivet/acceptance/, if-no-files-found: warn}

@@ -8,16 +8,18 @@ transport but is never the root of trust — a signed manifest is.
 ## Release signing preflight
 
 The tag-triggered release workflow requires `UPDATE_ED25519_PRIVATE_KEY_B64`
-before any macOS, Windows or Linux packaging starts. Its DER private key
+before any macOS or Windows packaging starts. Its DER private key
 must derive the exact Ed25519 public key embedded in `app/version.rkt`.
 Missing, malformed or mismatched keys fail the release. The publishing
 job repeats the check. CI tests use only throwaway keys; secrets are never
 printed or committed.
 
 Executable signing is independent of update-manifest verification:
-macOS packages are currently ad-hoc (not Apple notarized), while Windows
-MSI/ZIP packages are unsigned by default. Future Developer ID notarization
-and optional Windows Authenticode must not block one another.
+macOS tag releases are Developer ID-signed and Apple-notarized
+(`raco rivet package --production`; the workflow fails closed when signing
+credentials are absent), while Windows MSI/ZIP packages carry rivet's
+development signing. Optional Windows Authenticode must not block the
+macOS path.
 
 ## Trust chain
 
@@ -45,41 +47,25 @@ application protocol.
   install — nothing downloads or quits without an explicit user action.
 - **Windows parity**: the WinUI host runs the same consent flow and shows
   errors in-dialog (unpackaged apps have no toast identity).
-- **Linux**: the GTK4 host runs the same consent flow. There is no in-place
-  installer for a tarball install — "Quit and Install" opens the folder
-  holding the verified `payback-<version>-linux-<arch>.tar.gz`; extract it
-  over the app directory to finish. deb/rpm/AppImage installs do not use
-  this path at all (they upgrade outside the app, see below).
 - Update failure text must leave the screen with the user: the error is
-  selectable in the macOS update sheet, the Windows status InfoBar, and the
-  Linux status bar (Windows install failures also land a code in
+  selectable in the macOS update sheet and the Windows status InfoBar
+  (Windows install failures also land a code in
   `%APPDATA%\Payback\update-failed.txt`, reported on the next launch). A
   bug report starts from this string.
-- Every host carries an About surface (macOS Help menu, Windows/Linux
-  toolbar buttons) with the version, license line, and links to the
+- Every host carries an About surface (macOS Help menu, Windows toolbar
+  button) with the version, license line, and links to the
   website and the issue tracker — the entry point a bug report needs.
 
-## Linux install forms and their upgrade paths
+## Retired Linux leg (2026-11-20, #66)
 
-Every release ships four Linux artifacts per architecture (x64, arm64) —
-`tar.gz` (signed, the update-feed payload), `deb`, `rpm`, and `AppImage`.
-They are four ways to install the same build, and each carries its own
-upgrade path:
-
-| Install form | First install | Upgrades | Since |
-|---|---|---|---|
-| `tar.gz` | extract anywhere, run `payback` | in-app updater (x64 feed entry) or manual extract over the app directory | 1.4.0 |
-| `deb` | `sudo apt install ./payback-<version>-linux-<arch>.deb` (installs under `/opt/payback`, desktop entry included) | through the package manager (`apt upgrade` / reinstall the newer `.deb`); the in-app updater is a no-op for these installs | 1.6.0 |
-| `rpm` | `sudo dnf install ./payback-<version>-<build>-linux-<arch>.rpm` | through the package manager (`dnf upgrade` / reinstall the newer `.rpm`) | 1.6.0 |
-| `AppImage` | `chmod +x` and run — bundles its own GTK4 closure, runs on older distributions | replace the AppImage file with the new one; the in-app updater is a no-op for these installs | 1.6.0 |
-
-Policy: the **deb/rpm/AppImage are installer assets, deliberately not feed
-entries** — the update feed stays tar.gz-only, matching payback's
-installer-based update semantics. The feed's Linux entry remains
-`linux`/`x64` today; arm64 tar.gz installs upgrade by extracting the newer
-tar.gz over the app directory (a feed entry follows once arm64 installs
-exist in the field). Package-manager and AppImage installs never consult
-the feed for upgrades.
+The Linux desktop leg (GTK4 host; tar.gz / deb / rpm / AppImage / Flatpak
+artifacts) was retired by owner decision 2026-11-19. The signed feed no
+longer carries any `linux` entry: `select-update` on a Linux machine finds
+no candidate (engine-level proof in `tests/updater-test.rkt`, "narrowed feed
+answers macOS + Windows only"). Existing Linux installs keep their last
+version; the engine and its contract/bridge acceptance suites stay
+platform-neutral and keep passing on Linux machines in CI. The historical
+Linux install-form upgrade paths remain in Git history.
 
 ## Platform × architecture matrix
 
@@ -91,12 +77,11 @@ every release, so the feed covers every updater row from day one.
 | macOS Apple silicon | `macos`/`arm64` DMG entry | SwiftUI host mounts the DMG (`hdiutil attach`), copies the new `.app` over the installed one, clears the quarantine xattr, relaunches; previous bundle kept as `Payback.app.old` rollback | Ed25519 manifest (backend, racket/crypto) + artifact SHA-256 | 1.0.0 |
 | macOS Intel | `macos`/`x64` DMG entry | same flow on the x64 build | same | 1.5.0 |
 | Windows x64 | `windows`/`x64` MSI entry | WinUI host hands off to a detached script: wait for app exit → `msiexec /i ... /passive /norestart` → relaunch; the MSI supplies transactional rollback | same | 1.1.1 |
-| Linux x64 | `linux`/`x64` tar.gz entry | backend downloads and verifies; install is a manual extract over the current folder (tarball installs have no fixed prefix to self-swap) | same | 1.4.0 |
 
-The portable `.zip` assets (macOS per arch, Windows x64, Linux per arch) are
+The portable `.zip` assets (macOS per arch, Windows x64) are
 for humans — no-installer setups — and are deliberately **not** feed entries:
-payback's update semantics are installer-based (DMG mount / `msiexec` /
-tar.gz), unlike taskly's in-place zip swaps.
+payback's update semantics are installer-based (DMG mount / `msiexec`),
+unlike taskly's in-place zip swaps.
 
 ## `update-manifest.json`
 
@@ -134,8 +119,7 @@ Inner manifest (decoded `payload`) — rivet's manifest schema:
       "url": "https://…/payback-1.6.0-macos-arm64.dmg",
       "sha256": "<hex>", "size": 12345678, "installer": "dmg", "arguments": [] },
     { "platform": "macos", "architecture": "x64", "…": "…" },
-    { "platform": "windows", "architecture": "x64", "…": "…", "installer": "msi" },
-    { "platform": "linux", "architecture": "x64", "…": "…", "installer": "targz" }
+    { "platform": "windows", "architecture": "x64", "…": "…", "installer": "msi" }
   ]
 }
 ```
@@ -167,16 +151,12 @@ Tag `vX.Y.Z` → GitHub Actions (`.github/workflows/release.yml`):
 
 1. `validate` — `scripts/check-release-version.sh <tag>` (VERSION ==
    rivet.rktd == app/version.rkt == tag) + CHANGELOG section exists.
-2. `macos` (arm64 + x64 matrix) — `raco rivet package`, then portable zip +
-   drag-to-install DMG via `scripts/make-dmg.sh`.
+2. `macos` (arm64 + x64 matrix) — `raco rivet package --production`
+   (Developer ID + notarized; fails closed without signing credentials),
+   then portable zip + drag-to-install DMG via `scripts/make-dmg.sh`.
 3. `windows` — `raco rivet release --development` (MSI), plus a portable zip
    of the staged app directory.
-4. `linux` (x64 + arm64 matrix, `ubuntu-latest` / `ubuntu-24.04-arm`) —
-   `raco rivet release --development` over the embeddable Racket CS runtime
-   (rivet's `setup-embed-racket` action): signed tar.gz plus the native
-   installers selected by `linux-formats` (deb, rpm, AppImage) and a portable
-   zip, each with a `.sha256` sidecar.
-5. `release` — signs one merged `update-manifest.json` (+ the
+4. `release` — signs one merged `update-manifest.json` (+ the
    `update-stable.json` alias) with the Ed25519 key, writes `SHA256SUMS`,
    publishes the GitHub release, and attests build provenance.
 

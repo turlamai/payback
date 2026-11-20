@@ -1,7 +1,7 @@
 #lang racket/base
 
 ;; Payback backend: device records, payback math, and the online updater,
-;; served to the native SwiftUI/WinUI/GTK hosts over RVT1. All user-visible
+;; served to the native SwiftUI/WinUI hosts over RVT1. All user-visible
 ;; numbers are computed here so every platform shows identical values
 ;; (docs/data-format.md is the contract).
 ;;

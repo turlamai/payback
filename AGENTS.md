@@ -7,9 +7,21 @@
 - 行为边界与跨平台一致性以 `design/DESIGN.md` 的不变式与平台差异节为准。
 - 改界面先改原型再改实现（tlai-prototype-flow）；动共享层（design/、shared/）先 issue 声明，同 commit 落契约。
 
-## Current owner decision — 2026-11-18 quality-first
+## Current owner decision — 2026-11-19 platform line + commercialization
 
-This is a **non-commercial development product**. The previous 2026-10 authorization, pricing, trial, Pro and Permit/Commerce rollout decisions are canceled. Do not implement or restore checkout, activation, subscription, paid feature gates, trial expiry or update-entitlement windows. Keep source licenses, release-signature verification, privacy protections and tested data migration intact. Focus only on real product functionality, native platform parity, recovery, clear bilingual READMEs and honest website status. Read the [current family policy](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.md) before every development slice.
+Per [PORTFOLIO.md](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.md)
+(revision `6e40026`, 2026-11-19-platform-line-commercial): **Payback narrows to
+macOS + Windows + iOS** (Linux desktop leg dropped, [#66](https://github.com/turlamai/payback/issues/66))
+and joins the family's active commercialization workstreams as the full-platform
+payment-flow validation product (macOS / Windows / iOS / iPadOS). Its own PRICING
+decision must land before any purchase flow ships — do not implement or restore
+checkout, activation, subscription, paid feature gates, trial expiry or
+update-entitlement windows ahead of that decision. The previous 2026-10 pricing,
+trial, Pro and Permit/Commerce rollout decisions remain canceled. Keep source
+licenses, release-signature verification, privacy protections and tested data
+migration intact. Focus on real product functionality, native platform parity,
+recovery, clear bilingual READMEs and honest website status. Read the current
+family policy before every development slice.
 
 ## Required policy discovery at each slice
 
@@ -45,14 +57,17 @@ Payback 是一个「设备回本」桌面应用：记录电子产品的购买价
 |---|---|---|---|
 | macOS 14+ | SwiftUI（Swift Package） | `macos-host/` | ✅ 构建+测试+package 验证通过 |
 | Windows 10+ | WinUI 3（C++/WinRT） | `windows/` | 源码完整；v1.1.1 起真机验证过，像素级复核待做 |
-| Linux x64 | GTK4（C++，json-glib） | `linux/` | CI 构建 + xvfb 启动冒烟；真机复核待做 |
+| iOS / iPadOS | SwiftUI 伴随端（CompanionSession / RVT1 配对） | `ios/` | 开发中（#63）；RVT1 配对已落地，尚未交付 |
+
+Linux GTK4 桌面腿已于 2026-11-20 退役（#66，owner 决策 2026-11-19）：`linux/`、
+`flatpak/` 与 Linux 打包/e2e 已删除。引擎与 contract/bridge 验收套件保持平台中立，
+继续在 Linux 机器上运行（CI backend 矩阵 + engine-linux 验收 job）。
 
 ## 快速命令
 
 ```bash
-raco test tests/                      # 42 个测试用例 + 全协议 RPC 运行（必须全绿）
+raco test tests/                      # 43 个测试用例 + 全协议 RPC 运行（必须全绿）
 raco rivet schema check rivet-schema.json --json # RPC 兼容性门禁
-# Linux 宿主另需 GTK4/json-glib dev + 内嵌 Racket CS（配方见 CI linux-host job）
 raco rivet build                      # 编译后端 + 当前平台宿主（生成 typed 客户端）
 raco rivet dev                        # 构建并运行当前平台
 raco rivet package                    # 打包 + 审计验证
@@ -66,7 +81,7 @@ node scripts/gen-strings.js --check   # 中英文案一致性校验
   原生宿主、可分发包以及打包后的原生 UI 操作缺一不可。
 - 默认验收在隔离数据目录中植入 `Codex Acceptance Device`，启动打包应用，
   并确认该设备经后端计算后进入原生可访问性树；空窗口、截图或构建成功不算完成。
-- 跨平台交互要同步 macOS、Windows、Linux，或明确记录真实平台边界。
+- 跨平台交互要同步 macOS、Windows（iOS 伴随端按 #63 推进），或明确记录真实平台边界。
 - 不得用 `continue-on-error`、空测试、跳过 UI 或强杀进程作为成功证据。
 
 ## Rivet 前置流程（重要）
@@ -82,7 +97,7 @@ raco test tests/ && raco rivet build   # 回归 payback
 
 macOS 打包：`raco rivet package` 产物已自包含（外部库由 `raco ctool` staging 进 `runtime/lib`，宿主启动时切工作目录到 Resources 解析；图标走 `rivet.rktd` 的 `macos-icon`）——**无需任何后处理脚本**（旧 post-package.sh 已随 rivet #81/#91 上游修复退役）。
 
-Windows 打包（v1.4.1 两个发版事故的教训）：**后端 crypto 只许走 `rivet/distribution`，禁止 require `crypto/all`**——nettle factory 的 GMP FFI 在模块加载期硬性 `ffi-lib`，宿主机器没有 libgmp 就启动即死；rivet 负责把 OpenSSL/GMP DLL stage 进包（rivet #204 起）。图标走 `rivet.rktd` 的 `windows-icon`（.ico 进 exe 资源 + MSI ARPPRODUCTICON）。**平台宿主按包消费 rivet（rivet #238）**：`windows/RivetHost.vcxproj` 用 `ProjectReference` 指向 `rivet-host.vcxproj`、`linux/CMakeLists.txt` 用 `add_subdirectory` + `rivet::platform`、`macos-host/Package.swift` 依赖 rivet 根包——宿主不再把 rivet 源文件编进自己的构建（rivet 加编译单元无需下游改动）；Windows 别丢 `RIVET_WINDOWS_ICON_RC` 资源编译块。CI/release 的 rivet 安装按 `RIVET_PIN` 单源锁定；`setup-embed-racket` action 的 `uses:` 是字面 pin（GitHub Actions 不展开 env），升级时须与 `RIVET_PIN` 联动改两处（两处均有 keep-in-sync 注释）。
+Windows 打包（v1.4.1 两个发版事故的教训）：**后端 crypto 只许走 `rivet/distribution`，禁止 require `crypto/all`**——nettle factory 的 GMP FFI 在模块加载期硬性 `ffi-lib`，宿主机器没有 libgmp 就启动即死；rivet 负责把 OpenSSL/GMP DLL stage 进包（rivet #204 起）。图标走 `rivet.rktd` 的 `windows-icon`（.ico 进 exe 资源 + MSI ARPPRODUCTICON）。**平台宿主按包消费 rivet（rivet #238）**：`windows/RivetHost.vcxproj` 用 `ProjectReference` 指向 `rivet-host.vcxproj`、`macos-host/Package.swift` 依赖 rivet 根包——宿主不再把 rivet 源文件编进自己的构建（rivet 加编译单元无需下游改动）；Windows 别丢 `RIVET_WINDOWS_ICON_RC` 资源编译块。CI/release 的 rivet 安装按 `RIVET_PIN` 单源锁定；`setup-embed-racket` action 的 `uses:` 是字面 pin（GitHub Actions 不展开 env），升级时须与 `RIVET_PIN` 联动改两处（两处均有 keep-in-sync 注释）。
 
 品牌安装器资源：`rivet.rktd` 的 `dmg-background`（`shared/assets/dmg-background.png`，1320×800 即 660×400@2x）与 `windows-installer-bitmaps`（`wizard-banner.bmp` 493×58 / `wizard-dialog.bmp` 493×312，24 位 BMP），SVG 源与 PNG 预览同目录。当前 pin v0.12.0 已消费这些品牌安装器资源。**不要当作未使用资源删除。**
 
@@ -128,7 +143,8 @@ payback/
 │                         Models(wire 模型) / L10n(生成) / Money
 ├── windows/              WinUI 3 宿主：MainWindow.xaml(.h/.cpp) + MainWindow.Update.cpp
 │                         (更新/快报/庆祝) + HostHelpers(共享工具) + Strings.h(生成)
-├── linux/                GTK4 宿主：src/main.cpp（单文件全流程）+ Strings.h(生成)
+├── ios/                  SwiftUI 伴随端 PaybackCompanion（开发中，#63；
+│                         CompanionSession / RVT1 配对，macOS + iOS）
 ├── shared/strings/       strings.json 文案单源
 ├── scripts/              gen-strings.js（生成+校验）· gen-update-keys.sh · check-release-version.sh · make-update-manifest.sh
 ├── docs/                 data-format.md · sync-design.md · update.md · design.md · platform-roadmap.md
@@ -142,12 +158,12 @@ payback/
 - **加 RPC**：`app/backend.rkt` 里 `define-rpc` → 重新 `raco rivet build` 生成两端客户端 → 在 Swift/C++ 调用 → `tests/rpc-test.rkt` 补协议测试
 - **改文案**：只改 `shared/strings/strings.json` + 跑生成器
 - **改里程碑规则**：`app/domain.rkt` 的 ladder + `docs/data-format.md` + 两端 `MilestoneBadge`/`milestone_*` 本地化
-- **做多端同步（v1.4）**：M1 已落地——`app/sync.rkt`（分片扫描/合并/claim 写入）+ `sync-state`/`configure-sync`/`rename-machine` RPC + 各宿主设置段；改合并语义先跑 `tests/sync-test.rkt` 黄金夹具（纯 JSON 数据文件，未来移动端核心共用）；三宿主刷新走 5 秒 `sync-state` 轮询、`revision` 变化即 `load-all`；共享层改动前在 #9 声明单写窗口
-- **发布**：确认 `VERSION` / `rivet.rktd` / `app/version.rkt` / CHANGELOG 四处一致后打 `vX.Y.Z` tag 推送，CI 全自动出三平台安装包 + 便携 zip + 签名清单 `update-manifest.json` + GitHub Release（见 docs/update.md 和 .github/workflows/release.yml）
+- **做多端同步（v1.4）**：M1 已落地——`app/sync.rkt`（分片扫描/合并/claim 写入）+ `sync-state`/`configure-sync`/`rename-machine` RPC + 各宿主设置段；改合并语义先跑 `tests/sync-test.rkt` 黄金夹具（纯 JSON 数据文件，未来移动端核心共用）；各宿主刷新走 5 秒 `sync-state` 轮询、`revision` 变化即 `load-all`；共享层改动前在 #9 声明单写窗口
+- **发布**：确认 `VERSION` / `rivet.rktd` / `app/version.rkt` / CHANGELOG 四处一致后打 `vX.Y.Z` tag 推送，CI 全自动出 macOS + Windows 安装包 + 便携 zip + 签名清单 `update-manifest.json` + GitHub Release（见 docs/update.md 和 .github/workflows/release.yml）
 
 ## 组合定位（Portfolio placement）
 
-本产品目前是 **2026-11-18 质量与交付优先的非收费开发项目**。不重新引入旧版价格、购买、试用、Pro 或 Permit/Commerce 门禁；保持现行源码许可与更新签名安全。当前权威为 [产品组合策略](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.zh-CN.md)，不是已经删除的产品定价文件。
+本产品自 2026-11-19 起进入家族商业化工作流（全平台支付流程验证产品，macOS / Windows / iOS / iPadOS），但 **PRICING 决策落地前不得上线任何购买流程**；不重新引入旧版价格、购买、试用、Pro 或 Permit/Commerce 门禁；保持现行源码许可与更新签名安全。当前权威为 [产品组合策略](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.zh-CN.md)，不是已经删除的产品定价文件。
 
 ## Documentation languages
 

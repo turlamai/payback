@@ -1,8 +1,25 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.0] - unreleased
+
+Version numbering restarts here per the family reset discipline: the
+pre-reset releases v1.0.0–v1.12.0 and their tags were deleted. 0.1.0 is
+the first release of the narrowed macOS + Windows product. The engine,
+data format v2, the sync design and the RVT1 pairing journey are
+unchanged; the history below is retained verbatim as the record of the
+pre-reset line.
 
 ### Changed
+
+- **macOS + Windows platform focus (issue #66).** Linux desktop support is
+  retired: the GTK4 host, its CI legs and its release artifacts (deb, rpm,
+  AppImage, Flatpak, tar.gz) are removed; a release carries the macOS DMG
+  and portable zip (arm64 + x64) and the Windows MSI and portable zip
+  (x64). The signed update feed answers macos and windows candidates only.
+  The Racket engine stays host-agnostic — engine tests and the
+  contract/bridge acceptance suites still run on Linux machines. The
+  iOS/iPadOS companion source is untouched and stays in development (#63);
+  its marketing version aligns when that build slot lands.
 - The updater delegates its authenticated check/download state machine to
   `rivet/distribution`'s `make-updater`: Payback keeps its key, feed
   settings, `'app` component selection, and staging path, while candidate

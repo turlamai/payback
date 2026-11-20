@@ -20,7 +20,6 @@ carrying a tombstone (`deletedAt`). The full design, invariants and the
 |---|---|
 | macOS | `~/Library/Application Support/Payback/` |
 | Windows | `%APPDATA%\Payback\` |
-| Linux (experimental) | `$XDG_DATA_HOME/payback/` |
 
 Directory contents:
 

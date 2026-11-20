@@ -242,3 +242,56 @@
               "the shipped config must select 'app artifacts from the feed")
   (check-false (select-update config (feed-manifest #f))
                "component-less artifacts must not match the 'app config"))
+
+(test-case "narrowed feed answers macOS + Windows only (#66)"
+  ;; Since #66 (2026-11-20) the product ships macOS + Windows (iOS companion
+  ;; per #63); the signed release feed carries exactly macos:arm64:dmg,
+  ;; macos:x64:dmg and windows:x64:msi, all with the 'app component. The
+  ;; engine stays platform-neutral: on a Linux machine the same selection
+  ;; machinery must find no candidate, while every shipped platform ×
+  ;; architecture selects its installer. This is the engine-level proof of
+  ;; the issue's "signed feed answers windows+macos only" acceptance item.
+  (define priv (generate-private-key 'eddsa '((curve ed25519))))
+  (define priv-der (pk-key->datum priv 'OneAsymmetricKey))
+  (define pub (datum->pk-key (pk-key->datum priv 'rkt-public) 'rkt-public))
+  (define pub-der (pk-key->datum pub 'SubjectPublicKeyInfo))
+  (define tmp (make-temporary-file "payback-narrowed-~a" 'directory))
+  (define priv-path (build-path tmp "priv.der"))
+  (define manifest-path (build-path tmp "update-manifest.json"))
+  (call-with-output-file priv-path
+    (lambda (o) (write-bytes priv-der o)) #:exists 'truncate/replace)
+  (define zero-sha
+    "0000000000000000000000000000000000000000000000000000000000000000")
+  (define (art platform arch kind)
+    (update-artifact platform arch
+                     (format "https://downloads.example.com/payback-0.1.0-~a-~a.~a"
+                             platform arch kind)
+                     zero-sha 123456789 kind '() 'app))
+  (define manifest
+    (update-manifest app-identifier "0.1.0" 1 'stable
+                     "2026-11-20T00:00:00Z" "0.0.0" #f #t 100
+                     (list (art 'macos 'arm64 'dmg)
+                           (art 'macos 'x64 'dmg)
+                           (art 'windows 'x64 'msi))))
+  (call-with-output-file manifest-path
+    (lambda (o) (write-signed-manifest manifest
+                                       (read-ed25519-private-key priv-path)
+                                       "test-key" o)
+      (newline o)))
+  (define verified
+    (verify-signed-manifest (open-input-bytes (file->bytes manifest-path))
+                            (datum->pk-key pub-der 'SubjectPublicKeyInfo)
+                            #:key-id "test-key"))
+  (define (config-for platform arch)
+    (updater-config app-identifier "0.0.1" 'stable platform arch
+                    (datum->pk-key pub-der 'SubjectPublicKeyInfo)
+                    "test-key" 42 800000000 'app))
+  ;; retired Linux leg: no candidate on either architecture
+  (check-false (select-update (config-for 'linux 'x64) verified)
+               "linux x64 must select nothing from the narrowed feed")
+  (check-false (select-update (config-for 'linux 'arm64) verified)
+               "linux arm64 must select nothing from the narrowed feed")
+  ;; shipped platforms select their installer
+  (check-true (update-candidate? (select-update (config-for 'macos 'arm64) verified)))
+  (check-true (update-candidate? (select-update (config-for 'macos 'x64) verified)))
+  (check-true (update-candidate? (select-update (config-for 'windows 'x64) verified))))

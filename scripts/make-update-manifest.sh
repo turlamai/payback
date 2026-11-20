@@ -12,7 +12,6 @@
 #                   payback-<version>-macos-arm64.dmg
 #                   payback-<version>-macos-x64.dmg
 #                   payback-<version>-windows-x64.msi
-#                   payback-<version>-linux-x64.tar.gz
 #   <key-der-path> Ed25519 private key in DER (OneAsymmetricKey) form; the
 #                  CI secret stores it base64-encoded.
 #
@@ -22,10 +21,10 @@
 #
 # Feed policy (differs from taskly on purpose): payback's update semantics
 # are installer-based (macOS mounts the DMG, Windows runs the MSI), so the
-# feed carries the dmg/msi/targz installers. The portable .zip assets are
-# for humans, not for the feed. The native Linux installers (deb/rpm/
-# AppImage) upgrade through their own owners, so the feed keeps carrying
-# only the Linux tar.gz.
+# feed carries the dmg/msi installers. The portable .zip assets are for
+# humans, not for the feed. Since #66 (2026-11-20) the product ships
+# macOS + Windows only (iOS companion per #63); the feed answers exactly
+# those platforms — the retired Linux leg selects no candidate.
 #
 # Env overrides: RELEASE_ASSET_BASE_URL, RIVET_UPDATE_KEY_ID.
 set -euo pipefail
@@ -65,12 +64,11 @@ raco rivet sign-manifest \
   --artifact "macos:arm64:dmg:$DIST/payback-$VERSION-macos-arm64.dmg:app" \
   --artifact "macos:x64:dmg:$DIST/payback-$VERSION-macos-x64.dmg:app" \
   --artifact "windows:x64:msi:$DIST/payback-$VERSION-windows-x64.msi:app" \
-  --artifact "linux:x64:targz:$DIST/payback-$VERSION-linux-x64.tar.gz:app" \
   --rollback-allowed
 
 # ---- checksums (paths relative to the dist dir, so --check works from it) ----
 ( cd "$DIST" && find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 \
     | sort -z | xargs -0 shasum -a 256 ) > "$DIST/SHA256SUMS"
 
-echo "manifest: $DIST/update-manifest.json + update-stable.json alias (4 artifacts, key-id $KEY_ID)"
+echo "manifest: $DIST/update-manifest.json + update-stable.json alias (3 artifacts, key-id $KEY_ID)"
 echo "checksums: $DIST/SHA256SUMS"

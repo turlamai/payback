@@ -14,8 +14,8 @@
          update-public-key-b64
          default-update-base-url)
 
-(define app-version "1.12.0")
-(define app-build 20)
+(define app-version "0.1.0")
+(define app-build 1)
 (define app-identifier "site.jrtx.payback")
 (define app-channel 'stable)
 (define app-display-name "Payback")

@@ -2,13 +2,13 @@
 
 每一台设备，都在一天天回本。记下购买价格，Payback 帮你算每日成本——再设定「这台设备一天值多少钱」，看回本进度一点点走满。
 
-[![release](https://img.shields.io/github/v/release/turlamai/payback)](https://github.com/turlamai/payback/releases/latest) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey) [![CI](https://github.com/turlamai/payback/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/payback/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![release](https://img.shields.io/github/v/release/turlamai/payback)](https://github.com/turlamai/payback/releases/latest) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey) [![CI](https://github.com/turlamai/payback/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/payback/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 [English](README.md) · **中文**
 
 ## 开始使用
 
-Payback 的定位是已交付平台全部免费。不销售 Pro 授权，退役的设备数限制不构成任何付费墙。提供 macOS、Windows、Linux 桌面预览版；移动端尚未交付。
+Payback 的定位是已交付平台全部免费（自身 PRICING 决策落地前）。不销售 Pro 授权，退役的设备数限制不构成任何付费墙。提供 macOS 与 Windows 桌面版；iOS/iPadOS 伴随端开发中（[#63](https://github.com/turlamai/payback/issues/63)），尚未交付。Linux 桌面腿已于 2026-11-20 退役（[#66](https://github.com/turlamai/payback/issues/66)）。
 
 [安装、首次使用、隐私与备份恢复](docs/USER-GUIDE.zh-CN.md) · [English](docs/USER-GUIDE.md)
 
@@ -20,11 +20,12 @@ Payback 的定位是已交付平台全部免费。不销售 Pro 授权，退役�
 |---|---|---|
 | macOS 14+（Apple Silicon 与 Intel） | `payback-<version>-macos-<arch>.dmg`——`arm64` / `x64`，每种架构另附便携 `.zip` | 应用内更新（签名清单），或重新安装新版 DMG |
 | Windows 10+ x64 | `payback-<version>-windows-x64.msi` 安装器，或 `payback-<version>-windows-x64.zip` 便携版 | 应用内更新（签名清单，`msiexec` 静默交接），或重新运行新版 MSI |
-| Linux x64 / arm64 | `payback-<version>-linux-<arch>.tar.gz` / `payback-<version>-linux-<arch>.zip` 便携版、`payback-<version>-linux-<发行版架构>.deb`、`payback-<version>-linux-<工具链架构>.rpm`、`payback-<version>-linux-<工具链架构>.AppImage`（自带 GTK4），或 `payback-<version>-linux-<arch>.flatpak` Flatpak 包（app id 为 `site.jrtx.payback`；用 `flatpak --user install` 安装） | tar.gz：应用内下载并校验，用新 tar.gz 覆盖应用目录；deb / rpm / AppImage：走系统包管理器升级（AppImage 直接替换文件）；Flatpak 包：同样方式安装新版 bundle——这些安装形态不走应用内更新（[docs/update.md](docs/update.md)） |
+
+Linux 桌面构建（tar.gz / deb / rpm / AppImage / Flatpak）已于 2026-11-20 退役（#66）；既有 Linux 安装停留在最后一个版本。Racket 引擎与 contract/bridge 验收套件保持平台中立，CI 继续在 Linux 机器上运行。
 
 每个发布都带 `SHA256SUMS` 校验清单和 Sigstore 构建来源证明（`gh attestation verify <file> -R turlamai/payback`）。
 
-macOS 版本仅为 ad-hoc 签名。首次启动若被 Gatekeeper 拦截，右键应用选「打开」（或执行 `xattr -cr /Applications/Payback.app`）。
+macOS 发行构建为 Developer ID 签名并经 Apple 公证（发布管线缺少签名凭据时直接失败，不会静默出 ad-hoc 包）。Windows 安装器为 rivet 开发签名，暂不声称 Authenticode 身份。
 
 ## 这个想法
 
@@ -64,13 +65,13 @@ raco rivet dev                       # 构建并运行当前平台
 ## 构建
 
 ```bash
-raco test tests/          # 42 个测试用例 + 全协议 RPC 运行，200+ 断言
+raco test tests/          # 43 个测试用例 + 全协议 RPC 运行，200+ 断言
 raco rivet build          # 后端 + 当前平台原生宿主
 raco rivet package        # 可分发 .app / Windows 目录，含验证
 node scripts/gen-strings.js --check   # 中英文案一致性
 ```
 
-Windows 宿主源码完整，在 Windows 上用常规 WinUI 3 工具链构建（Windows 上执行 `raco rivet build`）；CI 在三大系统上验证 Racket 后端。
+Windows 宿主源码完整，在 Windows 上用常规 WinUI 3 工具链构建（Windows 上执行 `raco rivet build`）；CI 在 macOS、Windows 与 Linux 上同样验证 Racket 后端——产品只交付 macOS + Windows，引擎层保持平台中立。
 
 ## 工作方式
 
@@ -94,6 +95,7 @@ payback/
 ├── tests/                raco test 测试（领域、存储、校验、更新器、RPC 协议）
 ├── macos-host/           SwiftUI 宿主（Swift Package）
 ├── windows/              WinUI 3 宿主（C++/WinRT）
+├── ios/                  SwiftUI 伴随端 PaybackCompanion（开发中，#63）
 ├── shared/strings/       中英文案单源，生成各平台字符串表
 ├── scripts/              gen-strings.js · gen-update-keys.sh · check-release-version.sh
 ├── docs/                 data-format.md · update.md
@@ -109,7 +111,7 @@ payback/
 
 ## 商业路径
 
-当前聚焦数据录入、恢复、交互和更新质量，不规划商业授权或设备数量收费限制。部分历史构建可能保留旧限制，必须通过实际迁移测试确认；未交付的移动平台不作发布承诺。
+按[产品组合策略](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.zh-CN.md)（2026-11-19），Payback 是家族的全平台支付流程验证产品（macOS / Windows / iOS / iPadOS）。自身 PRICING 决策落地前不上线任何购买流程；在此之前已交付版本全部免费且不受限，不实现购买、商业授权或设备数量付费墙。当前仍聚焦数据录入、恢复、交互和更新质量。部分历史构建可能保留旧限制，必须通过实际迁移测试确认；未交付的移动平台不作发布承诺。
 
 ## 许可
 

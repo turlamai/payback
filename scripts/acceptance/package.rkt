@@ -1,6 +1,6 @@
 #lang racket/base
 (require json racket/file racket/path racket/system)
-(define platform (case (system-type 'os) [(windows) "windows"] [(macosx) "macos"] [(unix) "linux"] [else (error 'acceptance "unsupported platform")]))
+(define platform (case (system-type 'os) [(windows) "windows"] [(macosx) "macos"] [else (error 'acceptance "unsupported platform")]))
 (define raco (or (find-executable-path "raco") (error 'acceptance "raco was not found")))
 (unless (system* raco "rivet" "package" "--skip-launch-smoke") (error 'acceptance "package failed"))
 (define output (build-path ".rivet" "acceptance" platform))

@@ -10,9 +10,9 @@ Payback is designated free on every delivered platform. No Pro licences are offe
 
 ## Platforms and installation
 
-Desktop previews for macOS, Windows and Linux; mobile is not a current delivery.
+Desktop builds for macOS and Windows; an iOS/iPadOS companion is in development ([#63](https://github.com/turlamai/payback/issues/63)) and not yet delivered. The Linux desktop leg was retired on 2026-11-20 ([#66](https://github.com/turlamai/payback/issues/66)).
 
-Use [official Releases](https://github.com/turlamai/payback/releases), select an explicitly listed OS/architecture asset, read its release notes and check supplied checksums. An absent asset/platform is not a delivery promise. Preview builds may lack publisher signing or notarization; do not disable system-wide security protections to install them.
+Use [official Releases](https://github.com/turlamai/payback/releases), select an explicitly listed OS/architecture asset, read its release notes and check supplied checksums. An absent asset/platform is not a delivery promise. Official macOS release builds are Developer ID-signed and Apple-notarized; Windows installers carry rivet's development signing. Do not disable system-wide security protections to install.
 
 ## Your first successful session
 
@@ -30,7 +30,7 @@ Local records do not require a Payback account. A folder you place with a sync p
 
 ## Known limits
 
-Mixed-currency totals are currently unsafe (#23); use one currency and check per-device amounts. GTK date entry has a known ISO-date defect (#22).
+Mixed-currency totals are currently unsafe (#23); use one currency and check per-device amounts. The GTK date-entry defect (#22) retired with the Linux leg (#66).
 
 ## Updates and removal
 

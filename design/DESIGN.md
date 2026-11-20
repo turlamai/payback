@@ -2,7 +2,9 @@
 
 ## 当前范围
 
-2026-11-14：在既有原型上补齐设置、中英文、本地备份恢复、删除恢复与页面内自动化。保留暖纸色、橙绿语义、非模态设备分栏，以及五个页面入口。本契约是下一步原生实现对齐的设计基线，不表示产品引擎、三平台宿主、真实同步或发行工程已经完成。
+2026-11-14：在既有原型上补齐设置、中英文、本地备份恢复、删除恢复与页面内自动化。保留暖纸色、橙绿语义、非模态设备分栏，以及五个页面入口。本契约是下一步原生实现对齐的设计基线，不表示产品引擎、macOS/Windows 宿主、真实同步或发行工程已经完成。
+
+2026-11-20：Linux 桌面腿退役（#66，owner 决策 2026-11-19），原生对齐范围为 macOS + Windows；iOS/iPadOS 伴随端按 #63 推进。引擎与 contract/bridge 验收保持平台中立。
 
 - 主入口：`index.html`。
 - 五个情景入口：`prototype/library.html`、`prototype/device.html`、`prototype/empty.html`、`prototype/form.html`、`prototype/settings.html`。
@@ -162,7 +164,7 @@ const result = window.paybackAgent.commit(preview.data.token);
 
 ## 原生产品后续门槛
 
-本轮不把原型当成正式产品发布完成。下一阶段需要对齐三平台原生界面和共享文案，接入正式持久化与同步，落实 Racket 引擎与 CLI/MCP 契约，并完成可访问性、窗口缩放、完整读写与恢复、并发、安装升级和发行门禁。原型落账到 git 仓 `design/` 后，宿主才能按此基线实施。
+本轮不把原型当成正式产品发布完成。下一阶段需要对齐 macOS/Windows 原生界面和共享文案，接入正式持久化与同步，落实 Racket 引擎与 CLI/MCP 契约，并完成可访问性、窗口缩放、完整读写与恢复、并发、安装升级和发行门禁。原型落账到 git 仓 `design/` 后，宿主才能按此基线实施。
 
 
 ## Prototype source checkpoint — 2026-11-15
