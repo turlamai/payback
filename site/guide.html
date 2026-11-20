@@ -78,7 +78,7 @@ var _hmt = _hmt || [];
       <h2 class="manual-h2"><span class="h2-emoji">🚀</span><span data-i18n="qs.title">五分钟上手</span></h2>
       <p data-i18n="qs.intro">下载、打开、记一台设备。教程到这里就结束了——本页其余内容都是可选的。</p>
       <ol>
-        <li data-i18n="qs.s1"><strong>安装。</strong>到 <a href="https://github.com/turlamai/payback/releases/latest">Releases</a> 页下载最新版：macOS 把 DMG 里的应用拖进「应用程序」，Windows 双击 MSI 安装，Linux 用 deb / rpm / AppImage。首次启动若被拦（未公证构建）：右键 → 打开。</li>
+        <li data-i18n="qs.s1"><strong>安装。</strong>到 <a href="https://github.com/turlamai/payback/releases/latest">Releases</a> 页下载最新版：macOS 把 DMG 里的应用拖进「应用程序」，Windows 双击 MSI 安装。macOS 发行构建已经 Developer ID 签名与 Apple 公证。</li>
         <li data-i18n="qs.s2"><strong>打开应用。</strong>顶部是总览：累计投入、已赚回、整体日均、设备数。中间是设备列表。没有账号，不用注册。</li>
         <li data-i18n="qs.s3"><strong>添加第一台设备。</strong>点右上角 ＋，填名称、价格、购买日期。十秒钟记完，保存。</li>
         <li data-i18n="qs.s4"><strong>看每日回本数字。</strong>列表里立刻出现「每日成本」：价格 ÷ 持有天数。明天再看，它又低了一点。</li>
@@ -146,7 +146,6 @@ var _hmt = _hmt || [];
         <tbody>
           <tr><td>macOS</td><td><code>~/Library/Application Support/Payback/</code></td></tr>
           <tr><td>Windows</td><td><code>%APPDATA%\Payback\</code></td></tr>
-          <tr><td>Linux</td><td><code>$XDG_DATA_HOME/payback/</code></td></tr>
         </tbody>
       </table>
       <p data-i18n="db.export">完整备份包含全部机器分片与删除标记。旧 payback.json 仅为迁移保留副本；CSV 尚未交付，不属于付费规划。</p>
@@ -167,7 +166,7 @@ var _hmt = _hmt || [];
       </div>
       <div class="faq-item">
         <div class="faq-q" data-i18n="faq.q3">支持哪些平台？</div>
-        <p class="faq-a" data-i18n="faq.a3">提供 macOS、Windows 和 Linux 桌面预览，具体系统与架构以发行附件和版本说明为准。</p>
+        <p class="faq-a" data-i18n="faq.a3">提供 macOS 与 Windows 桌面版；iOS/iPadOS 伴随端开发中（#63），尚未交付。Linux 桌面腿已于 2026-11-20 退役（#66）。具体系统与架构以发行附件和版本说明为准。</p>
       </div>
       <div class="faq-item">
         <div class="faq-q" data-i18n="faq.q4">有哪些语言和主题？</div>
@@ -183,7 +182,7 @@ var _hmt = _hmt || [];
       </div>
       <div class="faq-item">
         <div class="faq-q" data-i18n="faq.q6">免费还是付费？</div>
-        <p class="faq-a" data-i18n="faq.a6">已交付平台全部免费。旧十设备/PB1 限制已移除；不销售 Pro，也不预售移动端。</p>
+        <p class="faq-a" data-i18n="faq.a6">已交付平台当前全部免费；自身 PRICING 决策落地前不上线购买流程。旧十设备/PB1 限制已移除；不销售 Pro，也不预售移动端。</p>
       </div>
       <div class="faq-item">
         <div class="faq-q" data-i18n="faq.q7">怎么卸载？</div>
@@ -212,7 +211,7 @@ var _hmt = _hmt || [];
     "toc.more": "更多", "toc.faq": "常见问题",
     "qs.title": "五分钟上手",
     "qs.intro": "下载、打开、记一台设备。教程到这里就结束了——本页其余内容都是可选的。",
-    "qs.s1": "<strong>安装。</strong>到 <a href=\"https://github.com/turlamai/payback/releases/latest\">Releases</a> 页下载最新版：macOS 把 DMG 里的应用拖进「应用程序」，Windows 双击 MSI 安装，Linux 用 deb / rpm / AppImage。首次启动若被拦（未公证构建）：右键 → 打开。",
+    "qs.s1": "<strong>安装。</strong>到 <a href=\"https://github.com/turlamai/payback/releases/latest\">Releases</a> 页下载最新版：macOS 把 DMG 里的应用拖进「应用程序」，Windows 双击 MSI 安装。macOS 发行构建已经 Developer ID 签名与 Apple 公证。",
     "qs.s2": "打开应用。顶部是总览：累计投入、已赚回、整体日均、设备数。中间是设备列表。没有账号，不用注册。",
     "qs.s3": "添加第一台设备。点右上角 ＋，填名称、价格、购买日期。十秒钟记完，保存。",
     "qs.s4": "看每日回本数字。列表里立刻出现「每日成本」：价格 ÷ 持有天数。明天再看，它又低了一点。",
@@ -251,7 +250,7 @@ var _hmt = _hmt || [];
     "faq.q2": "需要注册账号吗？",
     "faq.a2": "不需要。装好就用，数据在你自己机器上。",
     "faq.q3": "支持哪些平台？",
-    "faq.a3": "提供 macOS、Windows 和 Linux 桌面预览，具体系统与架构以发行附件和版本说明为准。",
+    "faq.a3": "提供 macOS 与 Windows 桌面版；iOS/iPadOS 伴随端开发中（#63），尚未交付。Linux 桌面腿已于 2026-11-20 退役（#66）。具体系统与架构以发行附件和版本说明为准。",
     "faq.q4": "有哪些语言和主题？",
     "faq.a4": "应用内可切换中文 / English（默认跟随系统）；深浅色外观跟随系统设置。",
     "faq.q5": "怎么更新？",
@@ -259,7 +258,7 @@ var _hmt = _hmt || [];
     "faq.legacyTitle": "v1.6.2 及更早版本",
     "faq.legacyBody": "这些版本的「检查更新」有缺陷（点了就报错），已在 v1.6.3 修复。请到 Releases 页手动下载安装一次，之后应用内更新恢复正常。",
     "faq.q6": "免费还是付费？",
-    "faq.a6": "已交付平台全部免费。旧十设备/PB1 限制已移除；不销售 Pro，也不预售移动端。",
+    "faq.a6": "已交付平台当前全部免费；自身 PRICING 决策落地前不上线购买流程。旧十设备/PB1 限制已移除；不销售 Pro，也不预售移动端。",
     "faq.q7": "怎么卸载？",
     "faq.a7": "删掉应用，再删数据文件夹（路径见「数据与备份」）。不留任何残留。",
     "footer.home": "首页",
@@ -278,7 +277,7 @@ var _hmt = _hmt || [];
     "toc.more": "More", "toc.faq": "FAQ",
     "qs.title": "Five-minute start",
     "qs.intro": "Download, open, log one device. That's the whole tutorial — everything else on this page is optional.",
-    "qs.s1": "<strong>Install.</strong> Grab the latest build from the <a href=\"https://github.com/turlamai/payback/releases/latest\">Releases</a> page: drag the app from the .dmg into Applications on macOS, run the .msi on Windows, or use the deb / rpm / AppImage on Linux. If first launch is blocked (unsigned build): right-click → Open.",
+    "qs.s1": "<strong>Install.</strong> Grab the latest build from the <a href=\"https://github.com/turlamai/payback/releases/latest\">Releases</a> page: drag the app from the .dmg into Applications on macOS, or run the .msi on Windows. macOS release builds are Developer ID-signed and Apple-notarized.",
     "qs.s2": "Open it. The top row is the overview: total spent, earned back, overall daily, device count. Below sits the device list. No account, nothing to register.",
     "qs.s3": "Add your first device. Click ＋ in the top-right corner, fill in name, price, purchase date. Ten seconds, then save.",
     "qs.s4": "Read the daily number. The list immediately shows a daily cost: price ÷ days held. Look again tomorrow — it dropped.",
@@ -317,7 +316,7 @@ var _hmt = _hmt || [];
     "faq.q2": "Do I need an account?",
     "faq.a2": "No. Install and use — your data lives on your machine.",
     "faq.q3": "Which platforms are supported?",
-    "faq.a3": "Desktop previews exist for macOS, Windows and Linux. Follow the release assets and notes for actual OS/architecture availability.",
+    "faq.a3": "Desktop builds exist for macOS and Windows; an iOS/iPadOS companion is in development (#63) and not yet delivered. The Linux desktop leg was retired on 2026-11-20 (#66). Follow the release assets and notes for actual OS/architecture availability.",
     "faq.q4": "Languages and themes?",
     "faq.a4": "Switch between 中文 and English in-app (defaults to your system); light and dark appearance follow the system.",
     "faq.q5": "How do updates work?",
@@ -325,7 +324,7 @@ var _hmt = _hmt || [];
     "faq.legacyTitle": "v1.6.2 and earlier",
     "faq.legacyBody": "The in-app update check was broken in these versions (it always errored); fixed in v1.6.3. Download and install v1.6.3+ manually from Releases once — in-app updates work again from then on.",
     "faq.q6": "Free or paid?",
-    "faq.a6": "All delivered platforms are designated free. The old ten-device/PB1 limit has been removed. There is no Pro sale or mobile presale.",
+    "faq.a6": "All delivered platforms are free today; no purchase flow ships before Payback's own PRICING decision. The old ten-device/PB1 limit has been removed. There is no Pro sale or mobile presale.",
     "faq.q7": "How do I uninstall?",
     "faq.a7": "Delete the app, then delete the data folder (see Data & backup). Nothing is left behind.",
     "footer.home": "Home",
